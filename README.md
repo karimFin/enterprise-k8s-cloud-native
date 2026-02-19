@@ -1,6 +1,4 @@
-# MyApp — Full Stack Kubernetes Practice Project
 
-A complete full-stack application built for practicing Docker, Kubernetes, and CI/CD with GitHub Actions. 
 ## Architecture
 
 ```
