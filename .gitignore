@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.npm
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Environment files (never commit secrets!)
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# K8s
+*.kubeconfig
+kubeconfig-*

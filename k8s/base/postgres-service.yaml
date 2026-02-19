@@ -1,0 +1,17 @@
+# Headless Service for StatefulSet — provides stable DNS names
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: myapp
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  clusterIP: None    # Headless — each pod gets its own DNS entry
+  selector:
+    app: postgres
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql

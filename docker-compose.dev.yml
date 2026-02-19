@@ -1,0 +1,28 @@
+# ─── Docker Compose: Development Override ─────────────────────
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# This adds hot-reload for frontend and backend development
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: builder
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    environment:
+      VITE_API_URL: "http://localhost:8080"
+
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    command: npx nodemon src/server.js
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      NODE_ENV: development

@@ -1,0 +1,59 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: myapp-staging
+
+resources:
+  - ../../base
+
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: backend
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: myapp-ingress
+      spec:
+        tls:
+          - hosts: [staging.myapp.example.com]
+            secretName: myapp-staging-tls
+        rules:
+          - host: staging.myapp.example.com
+            http:
+              paths:
+                - path: /api
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: backend
+                      port:
+                        number: 80
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: frontend
+                      port:
+                        number: 80
+
+configMapGenerator:
+  - name: app-config
+    behavior: merge
+    literals:
+      - NODE_ENV=staging
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=https://staging.myapp.example.com
+
+images:
+  - name: backend
+    newName: ghcr.io/yourorg/myapp-backend
+    newTag: staging-latest
+  - name: frontend
+    newName: ghcr.io/yourorg/myapp-frontend
+    newTag: staging-latest
