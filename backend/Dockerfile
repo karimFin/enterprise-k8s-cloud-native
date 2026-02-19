@@ -49,8 +49,8 @@ USER appuser
 EXPOSE 8080
 
 # Health check for Docker (K8s uses its own probes, but this helps locally)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:8080/health || exit 1
 
 # Use tini as entrypoint for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--"]
