@@ -1,5 +1,5 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
-# Common commands for development and operations
+# Common commands for development and operations of MyApp. Run `make help` for details.
 
 .PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod
 
