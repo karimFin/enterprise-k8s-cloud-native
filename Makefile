@@ -1,5 +1,5 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
-# Common commands for development and operations of MyApp. Run `make help` for details.
+# Common commands for development and operations. Run `make help` for details.
 
 .PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod
 
@@ -13,7 +13,7 @@ dev: ## Start all services (production build)
 dev-hot: ## Start with hot reload
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
-down: ## Stop all services
+down: ## Stop all services without removing volumes
 	docker compose down
 
 down-clean: ## Stop and remove volumes
