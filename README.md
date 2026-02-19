@@ -1,7 +1,6 @@
 # MyApp — Full Stack Kubernetes Practice Project
 
-A complete full-stack application built for practicing Docker, Kubernetes, and CI/CD with GitHub Actions. Designed to prepare for senior Kubernetes engineer interviews.
-
+A complete full-stack application built for practicing Docker, Kubernetes, and CI/CD with GitHub Actions. 
 ## Architecture
 
 ```
@@ -286,7 +285,7 @@ kubectl top pods -n myapp-production
 kubectl top nodes
 ```
 
-## Interview Topics This Project Covers
+##  Topics This Project Covers
 
 - Docker multi-stage builds, layer caching, security
 - K8s Deployments vs StatefulSets
