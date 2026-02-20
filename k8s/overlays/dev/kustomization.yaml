@@ -15,6 +15,9 @@ patches:
           spec:
             imagePullSecrets:
               - name: ghcr-secret
+            containers:
+              - name: backend
+                imagePullPolicy: IfNotPresent
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
@@ -26,6 +29,9 @@ patches:
           spec:
             imagePullSecrets:
               - name: ghcr-secret
+            containers:
+              - name: frontend
+                imagePullPolicy: IfNotPresent
   - patch: |-
       apiVersion: apps/v1
       kind: StatefulSet
