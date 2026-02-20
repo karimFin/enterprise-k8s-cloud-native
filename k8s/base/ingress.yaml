@@ -4,7 +4,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: myapp-ingress
-  namespace: myapp
   labels:
     app.kubernetes.io/part-of: myapp
   annotations:

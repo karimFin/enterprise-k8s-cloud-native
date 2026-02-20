@@ -14,6 +14,10 @@ patches:
         name: backend
       spec:
         replicas: 2
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
   - patch: |-
       apiVersion: networking.k8s.io/v1
       kind: Ingress
@@ -41,6 +45,26 @@ patches:
                       name: frontend
                       port:
                         number: 80
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: frontend
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+  - patch: |-
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: postgres
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
 
 configMapGenerator:
   - name: app-config
@@ -52,8 +76,8 @@ configMapGenerator:
 
 images:
   - name: backend
-    newName: ghcr.io/yourorg/myapp-backend
+    newName: ghcr.io/karimfin/myapp-backend
     newTag: staging-latest
   - name: frontend
-    newName: ghcr.io/yourorg/myapp-frontend
+    newName: ghcr.io/karimfin/myapp-frontend
     newTag: staging-latest

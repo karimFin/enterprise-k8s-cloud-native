@@ -141,8 +141,8 @@ jobs:
         run: |
           cd k8s/overlays/staging
           kustomize edit set image \
-            ghcr.io/yourorg/myapp-backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
-            ghcr.io/yourorg/myapp-frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+            backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
+            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
           kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
           kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
@@ -182,8 +182,8 @@ jobs:
         run: |
           cd k8s/overlays/prod
           kustomize edit set image \
-            ghcr.io/yourorg/myapp-backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
-            ghcr.io/yourorg/myapp-frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+            backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
+            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
           kubectl rollout status deployment/backend -n myapp-production --timeout=600s
           kubectl rollout status deployment/frontend -n myapp-production --timeout=600s

@@ -4,7 +4,6 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: backend-pdb
-  namespace: myapp
 spec:
   minAvailable: 1    # At least 1 pod must always be running
   selector:

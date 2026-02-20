@@ -25,6 +25,8 @@ patches:
                   limits:
                     cpu: "1"
                     memory: 1Gi
+            imagePullSecrets:
+              - name: ghcr-secret
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
@@ -32,6 +34,10 @@ patches:
         name: frontend
       spec:
         replicas: 3
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
   - patch: |-
       apiVersion: autoscaling/v2
       kind: HorizontalPodAutoscaler
@@ -40,6 +46,16 @@ patches:
       spec:
         minReplicas: 3
         maxReplicas: 20
+  - patch: |-
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: postgres
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
 
 configMapGenerator:
   - name: app-config
@@ -51,8 +67,8 @@ configMapGenerator:
 
 images:
   - name: backend
-    newName: ghcr.io/yourorg/myapp-backend
+    newName: ghcr.io/karimfin/myapp-backend
     newTag: v1.0.0
   - name: frontend
-    newName: ghcr.io/yourorg/myapp-frontend
+    newName: ghcr.io/karimfin/myapp-frontend
     newTag: v1.0.0

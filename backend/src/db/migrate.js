@@ -2,6 +2,12 @@ const { pool } = require('./connection');
 
 const migrations = [
   {
+    name: '000_enable_pgcrypto',
+    sql: `
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    `,
+  },
+  {
     name: '001_create_tasks',
     sql: `
       CREATE TABLE IF NOT EXISTS tasks (

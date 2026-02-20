@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: myapp
   labels:
     app: backend
     app.kubernetes.io/name: backend
