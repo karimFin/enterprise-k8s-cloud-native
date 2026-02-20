@@ -9,6 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/myapp
+  USE_KIND_FOR_STAGING: 'true'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -131,6 +132,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: [build-and-push, validate-k8s]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.USE_KIND_FOR_STAGING != 'true'
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -250,3 +252,51 @@ jobs:
         run: |
           kubectl rollout undo deployment/backend -n myapp-production
           kubectl rollout undo deployment/frontend -n myapp-production
+
+  # =========================================================================
+  # Job 4b: Deploy to Staging on ephemeral Kind cluster (free runner)
+  # Enabled when repository variable USE_KIND_FOR_STAGING == "true"
+  # =========================================================================
+  deploy-staging-kind:
+    name: Deploy to Staging (Kind)
+    needs: [build-and-push, validate-k8s]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.USE_KIND_FOR_STAGING == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imranismail/setup-kustomize@v2
+      - name: Normalize IMAGE_PREFIX (lowercase owner)
+        shell: bash
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: myapp-staging
+          node_image: kindest/node:v1.28.0
+      - name: Create staging namespace
+        run: kubectl create namespace myapp-staging || true
+      - name: Create GHCR imagePullSecret in cluster
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          kubectl -n myapp-staging delete secret ghcr-secret --ignore-not-found
+          kubectl -n myapp-staging create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username="$GHCR_USER" \
+            --docker-password="$GHCR_TOKEN" \
+            --docker-email="ci@example.com"
+      - name: Update image tags and deploy to Kind
+        run: |
+          cd k8s/overlays/staging
+          kustomize edit set image \
+            backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
+            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+          kubectl apply -k .
+          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
+          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
+      - name: Smoke test (Kind)
+        run: |
+          sleep 5
+          STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+          [ "$STATUS" = '"ok"' ] && echo "✅ Staging(kind) healthy" || (echo "❌ Failed" && exit 1)
