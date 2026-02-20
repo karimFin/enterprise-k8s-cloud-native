@@ -2,18 +2,25 @@ const { Pool } = require('pg');
 
 // Connection is configured entirely through environment variables.
 // In Kubernetes, these come from Secrets mounted as env vars.
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'myapp',
-  user: process.env.DB_USER || 'myapp',
-  password: process.env.DB_PASSWORD || 'myapp',
-  
-  // Pool settings — tune for your workload
-  max: parseInt(process.env.DB_POOL_MAX || '20'),
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-});
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        max: parseInt(process.env.DB_POOL_MAX || '20'),
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        database: process.env.DB_NAME || 'myapp',
+        user: process.env.DB_USER || 'myapp',
+        password: process.env.DB_PASSWORD || 'myapp',
+        max: parseInt(process.env.DB_POOL_MAX || '20'),
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      }
+);
 
 // Log pool errors (don't crash, just log — pool will retry)
 pool.on('error', (err) => {
