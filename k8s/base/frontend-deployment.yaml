@@ -24,6 +24,7 @@ spec:
       terminationGracePeriodSeconds: 15
       securityContext:
         runAsNonRoot: true
+        fsGroup: 101
         seccompProfile:
           type: RuntimeDefault
       affinity:

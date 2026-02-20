@@ -282,8 +282,6 @@ jobs:
           # Load images into the Kind cluster so Kubelet can use IfNotPresent without pulling
           kind load docker-image "${IMAGE_PREFIX}-backend:${GITHUB_SHA}" --name myapp-staging
           kind load docker-image "${IMAGE_PREFIX}-frontend:${GITHUB_SHA}" --name myapp-staging
-            --docker-password="$GHCR_TOKEN" \
-            --docker-email="ci@example.com"
       - name: Update image tags and deploy to Kind
         run: |
           cd k8s/overlays/staging
