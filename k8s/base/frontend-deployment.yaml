@@ -62,18 +62,29 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+          # Startup probe — give nginx time to start before readiness/liveness checks
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+            initialDelaySeconds: 0
           livenessProbe:
             httpGet:
               path: /health
               port: http
             periodSeconds: 15
             failureThreshold: 3
+            timeoutSeconds: 3
           readinessProbe:
             httpGet:
               path: /health
               port: http
             periodSeconds: 5
             failureThreshold: 2
+            timeoutSeconds: 3
+            initialDelaySeconds: 0
           lifecycle:
             preStop:
               exec:
