@@ -1,4 +1,3 @@
-# MyApp — Full Stack Kubernetes Practice Project
  
 ## Architecture
 
