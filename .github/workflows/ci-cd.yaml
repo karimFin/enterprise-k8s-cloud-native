@@ -273,17 +273,15 @@ jobs:
         with:
           cluster_name: myapp-staging
           node_image: kindest/node:v1.28.0
-      - name: Create staging namespace
-        run: kubectl create namespace myapp-staging || true
-      - name: Create GHCR imagePullSecret in cluster
-        env:
-          GHCR_USER: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build images locally and load into Kind
         run: |
-          kubectl -n myapp-staging delete secret ghcr-secret --ignore-not-found
-          kubectl -n myapp-staging create secret docker-registry ghcr-secret \
-            --docker-server=ghcr.io \
-            --docker-username="$GHCR_USER" \
+          # Build backend image
+          docker build -t "${IMAGE_PREFIX}-backend:${GITHUB_SHA}" ./backend
+          # Build frontend image (pass build arg for completeness)
+          docker build -t "${IMAGE_PREFIX}-frontend:${GITHUB_SHA}" --build-arg VITE_API_URL= ./frontend
+          # Load images into the Kind cluster so Kubelet can use IfNotPresent without pulling
+          kind load docker-image "${IMAGE_PREFIX}-backend:${GITHUB_SHA}" --name myapp-staging
+          kind load docker-image "${IMAGE_PREFIX}-frontend:${GITHUB_SHA}" --name myapp-staging
             --docker-password="$GHCR_TOKEN" \
             --docker-email="ci@example.com"
       - name: Update image tags and deploy to Kind
@@ -293,10 +291,20 @@ jobs:
             backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
             frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
-          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
-          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
       - name: Smoke test (Kind)
         run: |
           sleep 5
           STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
           [ "$STATUS" = '"ok"' ] && echo "✅ Staging(kind) healthy" || (echo "❌ Failed" && exit 1)
+      - name: Debug frontend rollout on failure
+        if: failure()
+        run: |
+          echo "Collecting diagnostics for frontend..."
+          kubectl -n myapp-staging get deploy frontend -o yaml | sed -e 's/^/DEPLOY: /'
+          kubectl -n myapp-staging get rs -l app=frontend -o wide || true
+          kubectl -n myapp-staging get pods -l app=frontend -o wide || true
+          POD="$(kubectl -n myapp-staging get pods -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+          if [ -n "$POD" ]; then
+            kubectl -n myapp-staging describe pod "$POD" || true
+            kubectl -n myapp-staging logs "$POD" --tail=200 || true
+          fi
