@@ -289,11 +289,25 @@ jobs:
             backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
             frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
+          # Wait for deployments to finish rolling out before running smoke tests
+          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
+          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
       - name: Smoke test (Kind)
         run: |
-          sleep 5
-          STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
-          [ "$STATUS" = '"ok"' ] && echo "✅ Staging(kind) healthy" || (echo "❌ Failed" && exit 1)
+          # Give the cluster a bit of extra time and retry the health check
+          ATTEMPTS=12
+          SLEEP_SECONDS=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+            if [ "$STATUS" = '"ok"' ]; then
+              echo "✅ Staging(kind) healthy"
+              exit 0
+            fi
+            echo "Health check attempt $i/$ATTEMPTS failed, waiting ${SLEEP_SECONDS}s..."
+            sleep "$SLEEP_SECONDS"
+          done
+          echo "❌ Failed after $ATTEMPTS attempts"
+          exit 1
       - name: Debug frontend rollout on failure
         if: failure()
         run: |
