@@ -10,7 +10,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/myapp
-  USE_KIND_FOR_STAGING: 'true'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -133,7 +132,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: [build-and-push, validate-k8s]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.USE_KIND_FOR_STAGING != 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -261,7 +260,7 @@ jobs:
   deploy-staging-kind:
     name: Deploy to Staging (Kind)
     needs: [build-and-push, validate-k8s]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.USE_KIND_FOR_STAGING == 'true'
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
