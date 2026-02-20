@@ -55,6 +55,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Normalize IMAGE_PREFIX (lowercase owner)
+        shell: bash
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -132,6 +135,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
+      - name: Normalize IMAGE_PREFIX (lowercase owner)
+        shell: bash
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
 
       - name: Configure kubectl
         uses: azure/k8s-set-context@v3
@@ -173,6 +179,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
+      - name: Normalize IMAGE_PREFIX (lowercase owner)
+        shell: bash
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
 
       - name: Configure kubectl
         uses: azure/k8s-set-context@v3
