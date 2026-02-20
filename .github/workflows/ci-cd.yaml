@@ -138,14 +138,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
+      - name: Prepare kubeconfig (staging)
+        id: prep-kube-staging
+        shell: bash
+        env:
+          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
+        run: |
+          if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
+            echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
+            echo "$RAW_KUBECONFIG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "$RAW_KUBECONFIG" | base64 -d > kc.yaml || echo "$RAW_KUBECONFIG" | base64 --decode > kc.yaml
+            echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
+            cat kc.yaml >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
       - name: Normalize IMAGE_PREFIX (lowercase owner)
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
-
       - name: Configure kubectl
         uses: azure/k8s-set-context@v3
         with:
-          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+          method: kubeconfig
+          kubeconfig: ${{ steps.prep-kube-staging.outputs.kubeconfig }}
 
       - name: Update image tags and deploy
         run: |
@@ -182,14 +198,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
+      - name: Prepare kubeconfig (production)
+        id: prep-kube-prod
+        shell: bash
+        env:
+          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
+        run: |
+          if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
+            echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
+            echo "$RAW_KUBECONFIG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "$RAW_KUBECONFIG" | base64 -d > kc.yaml || echo "$RAW_KUBECONFIG" | base64 --decode > kc.yaml
+            echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
+            cat kc.yaml >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
       - name: Normalize IMAGE_PREFIX (lowercase owner)
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
-
       - name: Configure kubectl
         uses: azure/k8s-set-context@v3
         with:
-          kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+          method: kubeconfig
+          kubeconfig: ${{ steps.prep-kube-prod.outputs.kubeconfig }}
 
       - name: Update image tags and deploy
         run: |
