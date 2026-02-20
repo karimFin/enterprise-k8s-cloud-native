@@ -289,6 +289,15 @@ jobs:
             backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
             frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
+          # Remove imagePullSecrets for Kind (not needed for locally loaded images)
+          # Create a dummy secret to prevent pod startup failures if imagePullSecrets reference doesn't exist
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=dummy \
+            --docker-password=dummy \
+            --docker-email=dummy@example.com \
+            -n myapp-staging \
+            --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
           # Wait for deployments to finish rolling out before running smoke tests
           kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
           kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
@@ -308,15 +317,29 @@ jobs:
           done
           echo "❌ Failed after $ATTEMPTS attempts"
           exit 1
-      - name: Debug frontend rollout on failure
+      - name: Debug deployment failures
         if: failure()
         run: |
-          echo "Collecting diagnostics for frontend..."
-          kubectl -n myapp-staging get deploy frontend -o yaml | sed -e 's/^/DEPLOY: /'
-          kubectl -n myapp-staging get rs -l app=frontend -o wide || true
-          kubectl -n myapp-staging get pods -l app=frontend -o wide || true
-          POD="$(kubectl -n myapp-staging get pods -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-          if [ -n "$POD" ]; then
-            kubectl -n myapp-staging describe pod "$POD" || true
-            kubectl -n myapp-staging logs "$POD" --tail=200 || true
+          echo "=== Backend Deployment ==="
+          kubectl -n myapp-staging get deploy backend -o wide || true
+          kubectl -n myapp-staging get pods -l app=backend -o wide || true
+          BACKEND_POD="$(kubectl -n myapp-staging get pods -l app=backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+          if [ -n "$BACKEND_POD" ]; then
+            echo "=== Backend Pod: $BACKEND_POD ==="
+            kubectl -n myapp-staging describe pod "$BACKEND_POD" || true
+            kubectl -n myapp-staging logs "$BACKEND_POD" --tail=200 || true
           fi
+          echo ""
+          echo "=== Frontend Deployment ==="
+          kubectl -n myapp-staging get deploy frontend -o wide || true
+          kubectl -n myapp-staging get pods -l app=frontend -o wide || true
+          FRONTEND_POD="$(kubectl -n myapp-staging get pods -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+          if [ -n "$FRONTEND_POD" ]; then
+            echo "=== Frontend Pod: $FRONTEND_POD ==="
+            kubectl -n myapp-staging describe pod "$FRONTEND_POD" || true
+            kubectl -n myapp-staging logs "$FRONTEND_POD" --tail=200 || true
+          fi
+          echo ""
+          echo "=== Postgres StatefulSet ==="
+          kubectl -n myapp-staging get statefulset postgres -o wide || true
+          kubectl -n myapp-staging get pods -l app=postgres -o wide || true
