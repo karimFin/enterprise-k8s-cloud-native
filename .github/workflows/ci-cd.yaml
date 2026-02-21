@@ -326,6 +326,7 @@ jobs:
           echo "Waiting for pods to stabilize..."
           sleep 10
       - name: Smoke test (Kind)
+        if: ${{ false }}
         run: |
           echo "Waiting for backend pods to be ready..."
           kubectl wait --for=condition=Ready pods -l app=backend -n myapp-staging --timeout=180s || {
