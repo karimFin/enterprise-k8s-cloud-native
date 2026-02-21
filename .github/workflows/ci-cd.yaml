@@ -322,13 +322,31 @@ jobs:
             kubectl get events -n myapp-staging --sort-by='.lastTimestamp' | grep -i frontend | tail -20
             exit 1
           }
+          # Give pods a moment to stabilize after rollout
+          echo "Waiting for pods to stabilize..."
+          sleep 10
       - name: Smoke test (Kind)
         run: |
+          # Wait for all backend pods to be ready
+          echo "Waiting for backend pods to be ready..."
+          kubectl wait --for=condition=ready pod -l app=backend -n myapp-staging --timeout=120s || {
+            echo "Backend pods not ready, checking status..."
+            kubectl get pods -n myapp-staging -l app=backend
+            exit 1
+          }
+          # Get a ready backend pod name
+          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[?(@.status.conditions[?(@.type=="Ready")].status=="True")].metadata.name}' | awk '{print $1}')
+          if [ -z "$BACKEND_POD" ]; then
+            echo "❌ No ready backend pod found"
+            kubectl get pods -n myapp-staging -l app=backend
+            exit 1
+          fi
+          echo "Using backend pod: $BACKEND_POD"
           # Give the cluster a bit of extra time and retry the health check
           ATTEMPTS=12
           SLEEP_SECONDS=5
           for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+            STATUS=$(kubectl exec -n myapp-staging "$BACKEND_POD" -- wget -qO- http://localhost:8080/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
             if [ "$STATUS" = '"ok"' ]; then
               echo "✅ Staging(kind) healthy"
               exit 0
@@ -337,6 +355,8 @@ jobs:
             sleep "$SLEEP_SECONDS"
           done
           echo "❌ Failed after $ATTEMPTS attempts"
+          echo "Backend pod logs:"
+          kubectl logs -n myapp-staging "$BACKEND_POD" --tail=50 || true
           exit 1
       - name: Debug deployment failures
         if: failure()
