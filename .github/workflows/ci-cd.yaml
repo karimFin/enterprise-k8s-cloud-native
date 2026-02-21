@@ -327,15 +327,19 @@ jobs:
           sleep 10
       - name: Smoke test (Kind)
         run: |
-          # Wait for all backend pods to be ready
           echo "Waiting for backend pods to be ready..."
-          kubectl wait --for=condition=ready pod -l app=backend -n myapp-staging --timeout=120s || {
+          kubectl wait --for=condition=Ready pods -l app=backend -n myapp-staging --timeout=180s || {
             echo "Backend pods not ready, checking status..."
             kubectl get pods -n myapp-staging -l app=backend
             exit 1
           }
-          # Get a ready backend pod name
-          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[?(@.status.conditions[?(@.type=="Ready")].status=="True")].metadata.name}' | awk '{print $1}')
+          echo "Waiting for frontend pods to be ready..."
+          kubectl wait --for=condition=Ready pods -l app=frontend -n myapp-staging --timeout=180s || {
+            echo "Frontend pods not ready, checking status..."
+            kubectl get pods -n myapp-staging -l app=frontend
+            exit 1
+          }
+          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[0].metadata.name}')
           if [ -z "$BACKEND_POD" ]; then
             echo "❌ No ready backend pod found"
             kubectl get pods -n myapp-staging -l app=backend
