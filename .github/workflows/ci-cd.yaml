@@ -181,7 +181,7 @@ jobs:
       - name: Smoke test
         run: |
           sleep 10
-          STATUS=$(kubectl exec -n myapp-dev deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+          STATUS=$(kubectl exec -n myapp-dev deploy/backend -- wget -qO- http://127.0.0.1:8080/health | grep -o '"ok"' || echo "FAIL")
           [ "$STATUS" = '"ok"' ] && echo "✅ Dev healthy" || (echo "❌ Failed" && exit 1)
 
       - name: Rollback on failure
@@ -256,7 +256,7 @@ jobs:
         if: steps.prep-kube-prod.outputs.skip_deploy != 'true'
         run: |
           sleep 15
-          STATUS=$(kubectl exec -n myapp-production deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+          STATUS=$(kubectl exec -n myapp-production deploy/backend -- wget -qO- http://127.0.0.1:8080/health | grep -o '"ok"' || echo "FAIL")
           if [ "$STATUS" != '"ok"' ]; then
             echo "❌ Rolling back production..."
             kubectl rollout undo deployment/backend -n myapp-production
