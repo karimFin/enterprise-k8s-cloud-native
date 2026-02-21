@@ -188,15 +188,13 @@ jobs:
           kubectl rollout undo deployment/frontend -n myapp-staging
 
   # =========================================================================
-  # Job 5: Deploy to Production (manual approval required)
+  # Job 5: Deploy to Production (auto after Staging Kind, if kubeconfig present)
   # =========================================================================
   deploy-prod:
     name: Deploy to Production
-    needs: deploy-staging
+    needs: deploy-staging-kind
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG_PROD != '' }}
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://myapp.example.com
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
@@ -246,6 +244,31 @@ jobs:
             exit 1
           fi
           echo "✅ Production deployment successful"
+
+      - name: Get Frontend URL
+        if: success()
+        run: |
+          echo "📋 Production deployment complete!"
+          echo ""
+          echo "Retrieving frontend URL..."
+          FRONTEND_HOST=$(kubectl get ingress myapp-ingress -n myapp-production -o jsonpath='{.spec.rules[0].host}' 2>/dev/null || echo "")
+          if [ -z "$FRONTEND_HOST" ]; then
+            echo "⚠️  Ingress not yet provisioned. Trying service endpoint..."
+            FRONTEND_IP=$(kubectl get svc frontend -n myapp-production -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [ -z "$FRONTEND_IP" ]; then
+              FRONTEND_IP=$(kubectl get svc frontend -n myapp-production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            fi
+            if [ -n "$FRONTEND_IP" ]; then
+              echo "🌐 Frontend URL: http://$FRONTEND_IP"
+            else
+              echo "⚠️  Service LoadBalancer IP/Hostname not yet assigned. Check with:"
+              echo "   kubectl get svc frontend -n myapp-production"
+            fi
+          else
+            echo "🌐 Frontend URL: https://$FRONTEND_HOST"
+          fi
+          echo ""
+          echo "Backend health: $(kubectl get svc backend -n myapp-production -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo 'Check with kubectl get svc backend -n myapp-production')"
 
       - name: Rollback on failure
         if: failure()
