@@ -204,26 +204,39 @@ jobs:
         env:
           RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
         run: |
+          if [ -z "$RAW_KUBECONFIG" ]; then
+            echo "⚠️  KUBE_CONFIG_PROD secret not configured. Skipping production deployment."
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "skip_deploy=false" >> $GITHUB_OUTPUT
           if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
             echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
             echo "$RAW_KUBECONFIG" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "$RAW_KUBECONFIG" | base64 -d > kc.yaml || echo "$RAW_KUBECONFIG" | base64 --decode > kc.yaml
+            echo "$RAW_KUBECONFIG" | base64 -d > kc.yaml 2>/dev/null || echo "$RAW_KUBECONFIG" | base64 --decode > kc.yaml
             echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
             cat kc.yaml >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           fi
+      - name: Skip deployment notice
+        if: steps.prep-kube-prod.outputs.skip_deploy == 'true'
+        run: |
+          echo "ℹ️  Production deployment skipped: KUBE_CONFIG_PROD secret not configured"
+          echo "To enable production deployments, configure the KUBE_CONFIG_PROD secret in GitHub repository settings"
       - name: Normalize IMAGE_PREFIX (lowercase owner)
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
       - name: Configure kubectl
+        if: steps.prep-kube-prod.outputs.skip_deploy != 'true'
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
           kubeconfig: ${{ steps.prep-kube-prod.outputs.kubeconfig }}
 
       - name: Update image tags and deploy
+        if: steps.prep-kube-prod.outputs.skip_deploy != 'true'
         run: |
           cd k8s/overlays/prod
           kustomize edit set image \
@@ -234,6 +247,7 @@ jobs:
           kubectl rollout status deployment/frontend -n myapp-production --timeout=600s
 
       - name: Verify and rollback if unhealthy
+        if: steps.prep-kube-prod.outputs.skip_deploy != 'true'
         run: |
           sleep 15
           STATUS=$(kubectl exec -n myapp-production deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
@@ -246,7 +260,7 @@ jobs:
           echo "✅ Production deployment successful"
 
       - name: Get Frontend URL
-        if: success()
+        if: steps.prep-kube-prod.outputs.skip_deploy != 'true' && success()
         run: |
           echo "📋 Production deployment complete!"
           echo ""
@@ -271,7 +285,7 @@ jobs:
           echo "Backend health: $(kubectl get svc backend -n myapp-production -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo 'Check with kubectl get svc backend -n myapp-production')"
 
       - name: Rollback on failure
-        if: failure()
+        if: steps.prep-kube-prod.outputs.skip_deploy != 'true' && failure()
         run: |
           kubectl rollout undo deployment/backend -n myapp-production
           kubectl rollout undo deployment/frontend -n myapp-production
