@@ -362,6 +362,28 @@ jobs:
           # Give pods a moment to stabilize after rollout
           echo "Waiting for pods to stabilize..."
           sleep 10
+
+      - name: Get Staging Frontend URL
+        run: |
+          echo "📋 Staging deployment complete!"
+          echo ""
+          echo "Staging cluster details:"
+          FRONTEND_POD=$(kubectl get pods -n myapp-staging -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          
+          echo "Frontend Pod: $FRONTEND_POD"
+          echo "Backend Pod: $BACKEND_POD"
+          echo ""
+          echo "Service endpoints:"
+          kubectl get svc -n myapp-staging frontend backend || true
+          echo ""
+          echo "Note: Staging runs on an ephemeral Kind cluster (local in GitHub Actions runner)"
+          echo "This cluster is temporary and will be deleted after workflow completes."
+          echo ""
+          echo "To test locally if you run Kind cluster:"
+          echo "  kubectl port-forward -n myapp-staging svc/frontend 3000:80"
+          echo "  Then visit: http://localhost:3000"
+
       - name: Smoke test (Kind)
         if: ${{ false }}
         run: |
