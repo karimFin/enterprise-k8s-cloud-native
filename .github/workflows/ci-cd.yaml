@@ -228,7 +228,7 @@ jobs:
   deploy-prod:
     name: Deploy to Production
     needs: [deploy-dev]
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     environment:
       name: prod
