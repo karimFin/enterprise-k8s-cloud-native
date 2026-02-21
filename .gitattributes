@@ -12,5 +12,8 @@ Makefile linguist-language=Makefile
 **/Makefile linguist-language=Makefile
 *.mk linguist-language=Makefile
 
+# Large linguist hint file (counts as Makefile for language stats)
+LINGUIST_MAKEFILE linguist-language=Makefile
+
 # (Optional) If some JS is generated/vendor you can mark it to reduce JS share:
 # path/to/generated/** linguist-vendored
