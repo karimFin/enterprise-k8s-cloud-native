@@ -117,8 +117,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
-      - name: Validate staging
-        run: kustomize build k8s/overlays/staging > /dev/null
+      - name: Validate dev
+        run: kustomize build k8s/overlays/dev > /dev/null
       - name: Validate prod
         run: kustomize build k8s/overlays/prod > /dev/null
       - name: Install kubeconform
@@ -130,24 +130,24 @@ jobs:
         run: kustomize build k8s/overlays/prod | kubeconform -strict -summary -kubernetes-version 1.28.0
 
   # =========================================================================
-  # Job 4: Deploy to Staging (automatic)
+  # Job 4: Deploy to Dev
   # =========================================================================
-  deploy-staging:
-    name: Deploy to Staging
+  deploy-dev:
+    name: Deploy to Dev
     needs: [build-and-push, validate-k8s]
-    if: ${{ false }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     environment:
-      name: staging
-      url: https://staging.myapp.example.com
+      name: dev
+      url: https://dev.myapp.example.com
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
-      - name: Prepare kubeconfig (staging)
-        id: prep-kube-staging
+      - name: Prepare kubeconfig (dev)
+        id: prep-kube-dev
         shell: bash
         env:
-          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
+          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV }}
         run: |
           if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
             echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
@@ -166,38 +166,41 @@ jobs:
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
-          kubeconfig: ${{ steps.prep-kube-staging.outputs.kubeconfig }}
+          kubeconfig: ${{ steps.prep-kube-dev.outputs.kubeconfig }}
 
       - name: Update image tags and deploy
         run: |
-          cd k8s/overlays/staging
+          cd k8s/overlays/dev
           kustomize edit set image \
             backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
             frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
-          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
-          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
+          kubectl rollout status deployment/backend -n myapp-dev --timeout=300s
+          kubectl rollout status deployment/frontend -n myapp-dev --timeout=300s
 
       - name: Smoke test
         run: |
           sleep 10
-          STATUS=$(kubectl exec -n myapp-staging deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
-          [ "$STATUS" = '"ok"' ] && echo "✅ Staging healthy" || (echo "❌ Failed" && exit 1)
+          STATUS=$(kubectl exec -n myapp-dev deploy/backend -- wget -qO- http://localhost:8080/health | grep -o '"ok"' || echo "FAIL")
+          [ "$STATUS" = '"ok"' ] && echo "✅ Dev healthy" || (echo "❌ Failed" && exit 1)
 
       - name: Rollback on failure
         if: failure()
         run: |
-          kubectl rollout undo deployment/backend -n myapp-staging
-          kubectl rollout undo deployment/frontend -n myapp-staging
+          kubectl rollout undo deployment/backend -n myapp-dev
+          kubectl rollout undo deployment/frontend -n myapp-dev
 
   # =========================================================================
-  # Job 5: Deploy to Production (auto after Staging Kind, if kubeconfig present)
+  # Job 5: Deploy to Production
   # =========================================================================
   deploy-prod:
     name: Deploy to Production
-    needs: [build-and-push, validate-k8s]
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.USE_KIND_FOR_STAGING != 'true') }}
+    needs: [deploy-dev]
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: https://myapp.example.com
     steps:
       - uses: actions/checkout@v4
       - uses: imranismail/setup-kustomize@v2
@@ -292,162 +295,3 @@ jobs:
         run: |
           kubectl rollout undo deployment/backend -n myapp-production
           kubectl rollout undo deployment/frontend -n myapp-production
-
-  # =========================================================================
-  # Job 4b: Deploy to Staging on ephemeral Kind cluster (free runner)
-  # Enabled when repository variable USE_KIND_FOR_STAGING == "true"
-  # =========================================================================
-  deploy-staging-kind:
-    name: Deploy to Staging (Kind)
-    needs: [build-and-push, validate-k8s]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.USE_KIND_FOR_STAGING == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: imranismail/setup-kustomize@v2
-      - name: Normalize IMAGE_PREFIX (lowercase owner)
-        shell: bash
-        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
-      - name: Create Kind cluster
-        uses: helm/kind-action@v1.8.0
-        with:
-          cluster_name: myapp-staging
-          node_image: kindest/node:v1.28.0
-      - name: Build images locally and load into Kind
-        run: |
-          # Build backend image
-          docker build -t "${IMAGE_PREFIX}-backend:${GITHUB_SHA}" ./backend
-          # Build frontend image (pass build arg for completeness)
-          docker build -t "${IMAGE_PREFIX}-frontend:${GITHUB_SHA}" --build-arg VITE_API_URL= ./frontend
-          # Load images into the Kind cluster so Kubelet can use IfNotPresent without pulling
-          kind load docker-image "${IMAGE_PREFIX}-backend:${GITHUB_SHA}" --name myapp-staging
-          kind load docker-image "${IMAGE_PREFIX}-frontend:${GITHUB_SHA}" --name myapp-staging
-      - name: Update image tags and deploy to Kind
-        run: |
-          cd k8s/overlays/staging
-          kustomize edit set image \
-            backend=${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }} \
-            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
-          kubectl apply -k .
-          # Remove imagePullSecrets for Kind (not needed for locally loaded images)
-          # Create a dummy secret to prevent pod startup failures if imagePullSecrets reference doesn't exist
-          kubectl create secret docker-registry ghcr-secret \
-            --docker-server=ghcr.io \
-            --docker-username=dummy \
-            --docker-password=dummy \
-            --docker-email=dummy@example.com \
-            -n myapp-staging \
-            --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
-          # Remove podAntiAffinity for Kind (single node, causes scheduling issues)
-          kubectl patch deployment backend -n myapp-staging --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]' 2>/dev/null || true
-          kubectl patch deployment frontend -n myapp-staging --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]' 2>/dev/null || true
-          # Check initial pod status
-          echo "Checking initial pod status..."
-          kubectl get pods -n myapp-staging -o wide
-          echo ""
-          # Wait for deployments to finish rolling out before running smoke tests
-          echo "Waiting for backend rollout..."
-          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s || {
-            echo "Backend rollout failed, checking pod status..."
-            kubectl get pods -n myapp-staging -l app=backend -o wide
-            kubectl describe pods -n myapp-staging -l app=backend | tail -100
-            kubectl get events -n myapp-staging --sort-by='.lastTimestamp' | grep -i backend | tail -20
-            exit 1
-          }
-          echo "Waiting for frontend rollout..."
-          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s || {
-            echo "Frontend rollout failed, checking pod status..."
-            kubectl get pods -n myapp-staging -l app=frontend -o wide
-            kubectl describe pods -n myapp-staging -l app=frontend | tail -100
-            kubectl get events -n myapp-staging --sort-by='.lastTimestamp' | grep -i frontend | tail -20
-            exit 1
-          }
-          # Give pods a moment to stabilize after rollout
-          echo "Waiting for pods to stabilize..."
-          sleep 10
-
-      - name: Get Staging Frontend URL
-        run: |
-          echo "📋 Staging deployment complete!"
-          echo ""
-          echo "Staging cluster details:"
-          FRONTEND_POD=$(kubectl get pods -n myapp-staging -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
-          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
-          
-          echo "Frontend Pod: $FRONTEND_POD"
-          echo "Backend Pod: $BACKEND_POD"
-          echo ""
-          echo "Service endpoints:"
-          kubectl get svc -n myapp-staging frontend backend || true
-          echo ""
-          echo "Note: Staging runs on an ephemeral Kind cluster (local in GitHub Actions runner)"
-          echo "This cluster is temporary and will be deleted after workflow completes."
-          echo ""
-          echo "To test locally if you run Kind cluster:"
-          echo "  kubectl port-forward -n myapp-staging svc/frontend 3000:80"
-          echo "  Then visit: http://localhost:3000"
-
-      - name: Smoke test (Kind)
-        if: ${{ false }}
-        run: |
-          echo "Waiting for backend pods to be ready..."
-          kubectl wait --for=condition=Ready pods -l app=backend -n myapp-staging --timeout=180s || {
-            echo "Backend pods not ready, checking status..."
-            kubectl get pods -n myapp-staging -l app=backend
-            exit 1
-          }
-          echo "Waiting for frontend pods to be ready..."
-          kubectl wait --for=condition=Ready pods -l app=frontend -n myapp-staging --timeout=180s || {
-            echo "Frontend pods not ready, checking status..."
-            kubectl get pods -n myapp-staging -l app=frontend
-            exit 1
-          }
-          BACKEND_POD=$(kubectl get pods -n myapp-staging -l app=backend -o jsonpath='{.items[0].metadata.name}')
-          if [ -z "$BACKEND_POD" ]; then
-            echo "❌ No ready backend pod found"
-            kubectl get pods -n myapp-staging -l app=backend
-            exit 1
-          fi
-          echo "Using backend pod: $BACKEND_POD"
-          # Give the cluster a bit of extra time and retry the health check
-          ATTEMPTS=12
-          SLEEP_SECONDS=5
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(kubectl exec -n myapp-staging "$BACKEND_POD" -- wget -qO- http://localhost:8080/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
-            if [ "$STATUS" = '"ok"' ]; then
-              echo "✅ Staging(kind) healthy"
-              exit 0
-            fi
-            echo "Health check attempt $i/$ATTEMPTS failed, waiting ${SLEEP_SECONDS}s..."
-            sleep "$SLEEP_SECONDS"
-          done
-          echo "❌ Failed after $ATTEMPTS attempts"
-          echo "Backend pod logs:"
-          kubectl logs -n myapp-staging "$BACKEND_POD" --tail=50 || true
-          exit 1
-      - name: Debug deployment failures
-        if: failure()
-        run: |
-          echo "=== Backend Deployment ==="
-          kubectl -n myapp-staging get deploy backend -o wide || true
-          kubectl -n myapp-staging get pods -l app=backend -o wide || true
-          BACKEND_POD="$(kubectl -n myapp-staging get pods -l app=backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-          if [ -n "$BACKEND_POD" ]; then
-            echo "=== Backend Pod: $BACKEND_POD ==="
-            kubectl -n myapp-staging describe pod "$BACKEND_POD" || true
-            kubectl -n myapp-staging logs "$BACKEND_POD" --tail=200 || true
-          fi
-          echo ""
-          echo "=== Frontend Deployment ==="
-          kubectl -n myapp-staging get deploy frontend -o wide || true
-          kubectl -n myapp-staging get pods -l app=frontend -o wide || true
-          FRONTEND_POD="$(kubectl -n myapp-staging get pods -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-          if [ -n "$FRONTEND_POD" ]; then
-            echo "=== Frontend Pod: $FRONTEND_POD ==="
-            kubectl -n myapp-staging describe pod "$FRONTEND_POD" || true
-            kubectl -n myapp-staging logs "$FRONTEND_POD" --tail=200 || true
-          fi
-          echo ""
-          echo "=== Postgres StatefulSet ==="
-          kubectl -n myapp-staging get statefulset postgres -o wide || true
-          kubectl -n myapp-staging get pods -l app=postgres -o wide || true

@@ -62,6 +62,34 @@ patches:
       data:
         NODE_ENV: development
         LOG_LEVEL: debug
+        CORS_ORIGIN: https://dev.myapp.example.com
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: myapp-ingress
+      spec:
+        tls:
+          - hosts: [dev.myapp.example.com]
+            secretName: myapp-dev-tls
+        rules:
+          - host: dev.myapp.example.com
+            http:
+              paths:
+                - path: /api
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: backend
+                      port:
+                        number: 80
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: frontend
+                      port:
+                        number: 80
 images:
   - name: backend
     newName: ghcr.io/karimfin/myapp-backend
