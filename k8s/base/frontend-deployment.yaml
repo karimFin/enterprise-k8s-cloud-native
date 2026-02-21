@@ -44,7 +44,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080  # Changed from 80 to match nginx.conf
               protocol: TCP
           securityContext:
             runAsUser: 101
@@ -53,7 +53,7 @@ spec:
             readOnlyRootFilesystem: false
             capabilities:
               drop: ["ALL"]
-              add: ["NET_BIND_SERVICE"]
+              # No need for NET_BIND_SERVICE since we're using port 8080 (>1024)
 
           resources:
             requests:
