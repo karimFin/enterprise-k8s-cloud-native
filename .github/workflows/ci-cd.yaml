@@ -191,7 +191,11 @@ jobs:
             frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           kubectl apply -k .
           kubectl rollout status deployment/backend -n myapp-dev --timeout=300s
-          kubectl rollout status deployment/frontend -n myapp-dev --timeout=300s
+          kubectl rollout status deployment/frontend -n myapp-dev --timeout=300s || true
+          kubectl get pods -n myapp-dev -o wide
+          kubectl describe pods -n myapp-dev -l app=frontend
+          kubectl logs -n myapp-dev -l app=frontend --tail=200
+          kubectl rollout status deployment/frontend -n myapp-dev --timeout=600s
 
       - name: Smoke test
         run: |
