@@ -92,7 +92,9 @@ jobs:
         with:
           context: ./${{ matrix.service }}
           push: true
-          platforms: linux/amd64,linux/arm64
+          # Cross-building Node (npm ci) under QEMU for arm64 is flaky
+          # Only build amd64 images in CI; add arm64 later with a native runner
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
