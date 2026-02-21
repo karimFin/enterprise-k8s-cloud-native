@@ -42,9 +42,10 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 
 USER nginx
 
-EXPOSE 80
+# Listen on non-privileged port 8080 (works with non-root user)
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -qO- http://localhost:80/health || exit 1
+  CMD wget -qO- http://localhost:8080/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
