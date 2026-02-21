@@ -61,15 +61,16 @@ spec:
               memory: 64Mi
             limits:
               cpu: 200m
-              memory: 128Mi
+              memory: 256Mi  # Increased from 128Mi - nginx needs more memory
           # Startup probe — give nginx time to start before readiness/liveness checks
           startupProbe:
             httpGet:
               path: /health
               port: http
-            failureThreshold: 30
+            failureThreshold: 40  # Increased: 40 × 2s = 80 seconds max wait
             periodSeconds: 2
-            initialDelaySeconds: 0
+            initialDelaySeconds: 2  # Give nginx 2 seconds before first check
+            timeoutSeconds: 3
           livenessProbe:
             httpGet:
               path: /health
