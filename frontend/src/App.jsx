@@ -90,7 +90,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>📋 Task Manager</h1>
+        <h1>📋 Task Manager v2</h1>
         <p className="subtitle">Full-Stack Kubernetes Demo</p>
       </header>
 
