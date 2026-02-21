@@ -1,0 +1,16 @@
+# Hint Linguist to count these file types towards repository language stats
+# Mark Dockerfiles explicitly
+Dockerfile linguist-language=Dockerfile
+**/Dockerfile linguist-language=Dockerfile
+
+# Shell scripts
+*.sh linguist-language=Shell
+scripts/** linguist-language=Shell
+
+# Makefiles
+Makefile linguist-language=Makefile
+**/Makefile linguist-language=Makefile
+*.mk linguist-language=Makefile
+
+# (Optional) If some JS is generated/vendor you can mark it to reduce JS share:
+# path/to/generated/** linguist-vendored
