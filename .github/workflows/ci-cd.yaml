@@ -298,9 +298,30 @@ jobs:
             --docker-email=dummy@example.com \
             -n myapp-staging \
             --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
+          # Remove podAntiAffinity for Kind (single node, causes scheduling issues)
+          kubectl patch deployment backend -n myapp-staging --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]' 2>/dev/null || true
+          kubectl patch deployment frontend -n myapp-staging --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/affinity"}]' 2>/dev/null || true
+          # Check initial pod status
+          echo "Checking initial pod status..."
+          kubectl get pods -n myapp-staging -o wide
+          echo ""
           # Wait for deployments to finish rolling out before running smoke tests
-          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s
-          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s
+          echo "Waiting for backend rollout..."
+          kubectl rollout status deployment/backend -n myapp-staging --timeout=300s || {
+            echo "Backend rollout failed, checking pod status..."
+            kubectl get pods -n myapp-staging -l app=backend -o wide
+            kubectl describe pods -n myapp-staging -l app=backend | tail -100
+            kubectl get events -n myapp-staging --sort-by='.lastTimestamp' | grep -i backend | tail -20
+            exit 1
+          }
+          echo "Waiting for frontend rollout..."
+          kubectl rollout status deployment/frontend -n myapp-staging --timeout=300s || {
+            echo "Frontend rollout failed, checking pod status..."
+            kubectl get pods -n myapp-staging -l app=frontend -o wide
+            kubectl describe pods -n myapp-staging -l app=frontend | tail -100
+            kubectl get events -n myapp-staging --sort-by='.lastTimestamp' | grep -i frontend | tail -20
+            exit 1
+          }
       - name: Smoke test (Kind)
         run: |
           # Give the cluster a bit of extra time and retry the health check
