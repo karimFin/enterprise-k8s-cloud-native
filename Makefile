@@ -1,7 +1,7 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod
+.PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -83,3 +83,13 @@ clean: ## Remove build artifacts and containers
 	docker compose down -v --rmi local
 	rm -rf frontend/dist frontend/node_modules
 	rm -rf backend/node_modules backend/coverage
+
+# ─── Local GitHub Actions (act) ───────────────────────────────
+act-test: ## Run GitHub Actions test job locally
+	act -j test
+
+act-build: ## Run GitHub Actions build-and-push locally (requires GHCR token)
+	act -j build-and-push -s GITHUB_TOKEN=$(GITHUB_TOKEN)
+
+act-deploy-dev: ## Run GitHub Actions deploy-dev locally (requires GHCR token)
+	act -j deploy-dev -s GITHUB_TOKEN=$(GITHUB_TOKEN)
