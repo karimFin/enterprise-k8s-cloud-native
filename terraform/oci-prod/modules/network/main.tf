@@ -101,23 +101,23 @@ resource "oci_core_security_list" "private" {
 }
 
 resource "oci_core_subnet" "public" {
-  cidr_block        = var.public_subnet_cidr
-  compartment_id    = var.compartment_ocid
-  vcn_id            = oci_core_vcn.this.id
-  display_name      = var.public_subnet_name
-  route_table_id    = oci_core_route_table.public.id
-  security_list_ids = [oci_core_security_list.public.id]
+  cidr_block                 = var.public_subnet_cidr
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_vcn.this.id
+  display_name               = var.public_subnet_name
+  route_table_id             = oci_core_route_table.public.id
+  security_list_ids          = [oci_core_security_list.public.id]
   prohibit_public_ip_on_vnic = false
-  dns_label         = "pub"
+  dns_label                  = "pub"
 }
 
 resource "oci_core_subnet" "private" {
-  cidr_block        = var.private_subnet_cidr
-  compartment_id    = var.compartment_ocid
-  vcn_id            = oci_core_vcn.this.id
-  display_name      = var.private_subnet_name
-  route_table_id    = oci_core_route_table.private.id
-  security_list_ids = [oci_core_security_list.private.id]
+  cidr_block                 = var.private_subnet_cidr
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_vcn.this.id
+  display_name               = var.private_subnet_name
+  route_table_id             = oci_core_route_table.private.id
+  security_list_ids          = [oci_core_security_list.private.id]
   prohibit_public_ip_on_vnic = true
-  dns_label         = "priv"
+  dns_label                  = "priv"
 }
