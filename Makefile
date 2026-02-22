@@ -111,9 +111,11 @@ tf-plan-prod: ## Terraform plan for OCI prod (uses TF_VAR_* envs)
 	cd $(TF_DIR) && $(TF) plan
 
 tf-apply-prod: ## Terraform apply for OCI prod (uses TF_VAR_* envs)
+	@[ "$(CONFIRM_APPLY)" = "prod" ] || (echo "Set CONFIRM_APPLY=prod to run apply" && exit 1)
 	cd $(TF_DIR) && $(TF) apply -auto-approve
 
 tf-destroy-prod: ## Terraform destroy for OCI prod (uses TF_VAR_* envs)
+	@[ "$(CONFIRM_DESTROY)" = "prod" ] || (echo "Set CONFIRM_DESTROY=prod to run destroy" && exit 1)
 	cd $(TF_DIR) && $(TF) destroy -auto-approve
 
 tf-output-prod: ## Terraform outputs for OCI prod
