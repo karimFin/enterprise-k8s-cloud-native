@@ -25,11 +25,21 @@ jobs:
           RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
         run: |
           mkdir -p $HOME/.kube
+          if [ -z "$RAW_KUBECONFIG" ]; then
+            echo "KUBE_CONFIG_PROD is not set"
+            exit 1
+          fi
           if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
             echo "$RAW_KUBECONFIG" > $HOME/.kube/config
           else
             echo "$RAW_KUBECONFIG" | base64 -d > $HOME/.kube/config || echo "$RAW_KUBECONFIG" | base64 --decode > $HOME/.kube/config
           fi
+          if grep -Eq 'server:\s*https?://(127\.0\.0\.1|localhost)' $HOME/.kube/config; then
+            echo "KUBE_CONFIG_PROD points to localhost. Use a real cluster kubeconfig."
+            exit 1
+          fi
+      - name: Verify cluster access
+        run: kubectl cluster-info
       - name: Deploy prod
         shell: bash
         run: |
