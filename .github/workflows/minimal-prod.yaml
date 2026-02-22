@@ -1,8 +1,0 @@
-name: Legacy Prod Release
-
-on:
-  workflow_call:
-
-jobs:
-  call-prod-release:
-    uses: ./.github/workflows/prod-release.yaml

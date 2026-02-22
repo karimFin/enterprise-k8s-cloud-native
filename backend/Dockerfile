@@ -18,6 +18,16 @@ RUN npm ci
 COPY . .
 RUN npm test
 
+FROM node:20-alpine AS dev
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ENV NODE_ENV=development
+ENV PORT=8080
+EXPOSE 8080
+
 # ============================================================================
 # Stage 3: Production runtime
 # ============================================================================

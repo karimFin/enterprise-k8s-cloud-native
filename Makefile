@@ -1,7 +1,7 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod
+.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod
 
 TF ?= ./.tools/terraform-1.10.5/terraform
 TF_DIR ?= terraform/oci-prod
@@ -15,6 +15,12 @@ dev: ## Start all services (production build)
 
 dev-hot: ## Start with hot reload
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+dev-hot-logs: ## Follow logs for hot reload dev
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
+
+dev-hot-open: ## Start hot reload and open browser
+	open http://localhost:3000 && docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 down: ## Stop all services without removing volumes
 	docker compose down

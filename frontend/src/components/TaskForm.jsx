@@ -62,11 +62,11 @@ export default function TaskForm({ onSubmit, onCancel }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="assigned_to">Email or Username</label>
+          <label htmlFor="assigned_to">Assign To (Email or Username)</label>
           <input
             id="assigned_to"
             type="text"
-            placeholder="engineer@company.com"
+            placeholder="email@company.com"
             value={form.assigned_to}
             onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
           />

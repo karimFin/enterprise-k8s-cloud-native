@@ -1,8 +1,0 @@
-name: Legacy Dev CI
-
-on:
-  workflow_call:
-
-jobs:
-  call-dev-ci:
-    uses: ./.github/workflows/dev-ci.yaml
