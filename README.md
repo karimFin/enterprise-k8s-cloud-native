@@ -120,6 +120,7 @@ kubectl rollout status deployment/backend -n myapp-production
 
 - Dev CI builds, tests, and deploys to `myapp-dev`.
 - Prod Release deploys a selected image SHA to `myapp-production`.
+- CI/CD uses a reusable workflow in `.github/workflows/reusable-cicd.yaml` for test → build → deploy.
 - Terraform CI validates and formats IaC changes.
 - Dependabot keeps dependencies updated weekly.
 
