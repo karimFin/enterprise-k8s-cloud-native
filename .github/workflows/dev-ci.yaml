@@ -102,6 +102,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install OCI CLI
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install oci-cli
+      - name: Configure OCI CLI
+        shell: bash
+        env:
+          OCI_CONFIG: ${{ secrets.OCI_CONFIG }}
+          OCI_API_KEY: ${{ secrets.OCI_API_KEY }}
+        run: |
+          mkdir -p $HOME/.oci
+          if [ -z "$OCI_CONFIG" ] || [ -z "$OCI_API_KEY" ]; then
+            echo "OCI_CONFIG or OCI_API_KEY is not set"
+            exit 1
+          fi
+          if echo "$OCI_CONFIG" | grep -q '\[DEFAULT\]'; then
+            printf '%s\n' "$OCI_CONFIG" > $HOME/.oci/config
+          else
+            if echo "$OCI_CONFIG" | base64 -d > $HOME/.oci/config 2>/dev/null || echo "$OCI_CONFIG" | base64 --decode > $HOME/.oci/config 2>/dev/null; then
+              true
+            else
+              printf '%s\n' "$OCI_CONFIG" > $HOME/.oci/config
+            fi
+          fi
+          if echo "$OCI_API_KEY" | grep -q 'BEGIN RSA PRIVATE KEY'; then
+            printf '%s\n' "$OCI_API_KEY" > $HOME/.oci/oci_api_key.pem
+          else
+            if echo "$OCI_API_KEY" | base64 -d > $HOME/.oci/oci_api_key.pem 2>/dev/null || echo "$OCI_API_KEY" | base64 --decode > $HOME/.oci/oci_api_key.pem 2>/dev/null; then
+              true
+            else
+              printf '%s\n' "$OCI_API_KEY" > $HOME/.oci/oci_api_key.pem
+            fi
+          fi
+          if grep -q '^key_file=' $HOME/.oci/config; then
+            sed -i.bak "s|^key_file=.*|key_file=$HOME/.oci/oci_api_key.pem|" $HOME/.oci/config
+          else
+            echo "key_file=$HOME/.oci/oci_api_key.pem" >> $HOME/.oci/config
+          fi
+          chmod 600 $HOME/.oci/oci_api_key.pem
       - uses: imranismail/setup-kustomize@v2
       - name: Validate dev
         run: kustomize build k8s/overlays/dev > /dev/null
