@@ -1,0 +1,11 @@
+region = "eu-stockholm-1"
+compartment_ocid = "ocid1.tenancy.oc1..aaaaaaaa6allcjew27qqi3pdg4pa3p57m6vhbsb3ppllf4fdlbymguvrt4cq"
+tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaa6allcjew27qqi3pdg4pa3p57m6vhbsb3ppllf4fdlbymguvrt4cq"
+kubernetes_version = "v1.34.2"
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICiQUxz70wD6zzy2YXTphQJKnqvBwCPZnyvXcpumvhYr karim.mdmirajul@unikie.com"
+node_pool_size = 1
+node_pool_shape = "VM.Standard.E3.Flex"
+node_pool_ocpus = 1
+node_pool_memory_gbs = 8
+enable_prod_deploy = false
+node_image_id = "ocid1.image.oc1.eu-stockholm-1.aaaaaaaa5f7q6jj7qpxr6rlxxaptosnvakv675f2xoggrheerog42b2jgxnq"

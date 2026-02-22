@@ -1,6 +1,6 @@
 # MyApp Platform
 
-Production-ready, cloud-native application with React frontend, Node.js API, and PostgreSQL. Deployed on Kubernetes with CI/CD and OCI Terraform infrastructure.
+Production-ready, cloud-native application. Deployed on Kubernetes with CI/CD and OCI Terraform infrastructure.
 
 ## Highlights
 
@@ -89,6 +89,8 @@ To have a separate dev cluster, create a new Terraform folder (e.g. `terraform/o
 
 - Dev CI builds, tests, and deploys to `myapp-dev`.
 - Prod Release deploys a selected image SHA to `myapp-production`.
+- Terraform CI validates and formats IaC changes.
+- Dependabot keeps dependencies updated weekly.
 
 ## Repository Layout
 
@@ -134,7 +136,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ## CI/CD Pipeline Flow
 
 ```
-PR opened → Test (lint + unit tests) → Security scan (Trivy)
+PR opened → Test (unit tests) → Security scan (Trivy)
                                               │
                                     merge to main
                                               │
@@ -145,8 +147,6 @@ PR opened → Test (lint + unit tests) → Security scan (Trivy)
                                     Deploy to Staging
                                     Rollout status check
                                     Smoke test
-                                              │
-                                    [Manual approval]
                                               │
                                     Deploy to Production
                                     Rollout status check
@@ -185,7 +185,7 @@ kubectl top pods -n myapp-production
 kubectl top nodes
 ```
 
-##  Covers
+##  WHD
 
 - Docker multi-stage builds, layer caching, security
 - K8s Deployments vs StatefulSets

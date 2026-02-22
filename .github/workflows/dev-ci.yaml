@@ -2,10 +2,9 @@ name: Dev CI
 
 on:
   push:
-    branches: ['**']
+    branches: [dev]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [dev]
 
 env:
   REGISTRY: ghcr.io
@@ -41,9 +40,8 @@ jobs:
     name: Build ${{ matrix.service }}
     needs: test
     if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -51,6 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -95,6 +94,10 @@ jobs:
           format: 'sarif'
           output: 'trivy-${{ matrix.service }}.sarif'
           severity: 'CRITICAL,HIGH'
+      - name: Upload Trivy report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
 
   validate-k8s:
     name: Validate K8s Manifests
@@ -158,11 +161,11 @@ jobs:
   deploy-dev:
     name: Deploy to Dev
     needs: [build-and-push, validate-k8s]
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
     environment:
       name: dev
-      url: http://79.72.18.36
+      url: http://79.76.43.88
     steps:
       - uses: actions/checkout@v4
       - name: Install OCI CLI
@@ -206,18 +209,18 @@ jobs:
           fi
           chmod 600 $HOME/.oci/oci_api_key.pem
       - uses: imranismail/setup-kustomize@v2
-      - name: Prepare kubeconfig (dev)
+      - name: Prepare kubeconfig (prod cluster)
         id: prep-kube-dev
         shell: bash
         env:
-          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV }}
+          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
         run: |
           if [ -z "$RAW_KUBECONFIG" ]; then
-            echo "KUBE_CONFIG_DEV is not set"
+            echo "KUBE_CONFIG_PROD is not set"
             exit 1
           fi
           if echo "$RAW_KUBECONFIG" | grep -Eq 'server:\s*https?://(127\.0\.0\.1|localhost)'; then
-            echo "KUBE_CONFIG_DEV points to localhost. Use a real cluster kubeconfig."
+            echo "KUBE_CONFIG_PROD points to localhost. Use a real cluster kubeconfig."
             exit 1
           fi
           if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
