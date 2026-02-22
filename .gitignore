@@ -26,3 +26,8 @@ docker-compose.override.yml
 # K8s
 *.kubeconfig
 kubeconfig-*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
