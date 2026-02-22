@@ -9,6 +9,7 @@ module "network" {
 module "oke" {
   source               = "./modules/oke"
   compartment_ocid     = var.compartment_ocid
+  tenancy_ocid         = var.tenancy_ocid
   cluster_name         = var.cluster_name
   kubernetes_version   = var.kubernetes_version
   vcn_id               = module.network.vcn_id

@@ -89,6 +89,8 @@ To have a separate dev cluster, create a new Terraform folder (e.g. `terraform/o
 
 - Dev CI builds, tests, and deploys to `myapp-dev`.
 - Prod Release deploys a selected image SHA to `myapp-production`.
+- Terraform CI validates and formats IaC changes.
+- Dependabot keeps dependencies updated weekly.
 
 ## Repository Layout
 
@@ -134,7 +136,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ## CI/CD Pipeline Flow
 
 ```
-PR opened → Test (lint + unit tests) → Security scan (Trivy)
+PR opened → Test (unit tests) → Security scan (Trivy)
                                               │
                                     merge to main
                                               │
@@ -145,8 +147,6 @@ PR opened → Test (lint + unit tests) → Security scan (Trivy)
                                     Deploy to Staging
                                     Rollout status check
                                     Smoke test
-                                              │
-                                    [Manual approval]
                                               │
                                     Deploy to Production
                                     Rollout status check

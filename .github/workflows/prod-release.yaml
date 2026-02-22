@@ -1,11 +1,8 @@
 name: Prod Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      image_sha:
-        description: Commit SHA tag to deploy (from Dev CI)
-        required: true
+  push:
+    branches: [prod]
 
 jobs:
   deploy:
@@ -86,10 +83,11 @@ jobs:
           OWNER_LOWER=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
           IMAGE_BACKEND=ghcr.io/${OWNER_LOWER}/myapp-backend
           IMAGE_FRONTEND=ghcr.io/${OWNER_LOWER}/myapp-frontend
+          IMAGE_SHA=${{ github.sha }}
           cd k8s/overlays/prod
           kustomize edit set image \
-            backend=${IMAGE_BACKEND}:${{ inputs.image_sha }} \
-            frontend=${IMAGE_FRONTEND}:${{ inputs.image_sha }}
+            backend=${IMAGE_BACKEND}:${IMAGE_SHA} \
+            frontend=${IMAGE_FRONTEND}:${IMAGE_SHA}
           kustomize build . | kubectl apply -f -
           kubectl rollout status deployment/backend -n myapp-production --timeout=600s
           kubectl rollout status deployment/frontend -n myapp-production --timeout=600s

@@ -3,7 +3,7 @@ data "oci_identity_availability_domains" "ads" {
 }
 
 data "oci_core_images" "node_images" {
-  compartment_id           = var.compartment_ocid
+  compartment_id           = coalesce(var.tenancy_ocid, var.compartment_ocid)
   operating_system         = var.node_os
   operating_system_version = var.node_os_version
   sort_by                  = "TIMECREATED"
@@ -11,7 +11,7 @@ data "oci_core_images" "node_images" {
 }
 
 locals {
-  node_image_id = var.node_image_id != null ? var.node_image_id : data.oci_core_images.node_images.images[0].id
+  node_image_id = var.node_image_id != null ? var.node_image_id : try(data.oci_core_images.node_images.images[0].id, null)
 }
 
 resource "oci_containerengine_cluster" "this" {
@@ -62,5 +62,11 @@ resource "oci_containerengine_node_pool" "this" {
   ssh_public_key = var.ssh_public_key
   timeouts {
     delete = "120m"
+  }
+  lifecycle {
+    precondition {
+      condition     = local.node_image_id != null
+      error_message = "No node image found. Set node_image_id or ensure tenancy_ocid/compartment_ocid has access to images for ${var.node_os} ${var.node_os_version}."
+    }
   }
 }

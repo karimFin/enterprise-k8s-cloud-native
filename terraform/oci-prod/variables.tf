@@ -16,6 +16,11 @@ variable "compartment_ocid" {
   type = string
 }
 
+variable "tenancy_ocid" {
+  type    = string
+  default = null
+}
+
 variable "cluster_name" {
   type    = string
   default = "myapp-prod-oke"
