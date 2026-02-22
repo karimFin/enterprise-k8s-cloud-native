@@ -52,6 +52,22 @@ GITHUB_TOKEN=YOUR_GHCR_TOKEN make act-deploy-dev
 git push origin main
 ```
 
+## Terraform
+
+```bash
+cd terraform
+terraform init
+terraform plan
+terraform apply
+```
+
+```bash
+terraform apply -var="enable_ingress_nginx=true"
+terraform apply -var="enable_cert_manager=true"
+terraform apply -var="enable_metrics_server=true"
+terraform apply -var="enable_monitoring=true"
+```
+
 ## Useful Checks
 
 ```bash
