@@ -69,13 +69,6 @@ patches:
       kind: Ingress
       metadata:
         name: myapp-ingress
-  - patch: |-
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: frontend
-      spec:
-        type: LoadBalancer
 images:
   - name: backend
     newName: ghcr.io/karimfin/myapp-backend
