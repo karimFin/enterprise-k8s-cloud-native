@@ -90,7 +90,7 @@ To have a separate dev cluster, create a new Terraform folder (e.g. `terraform/o
 - Dev CI builds, tests, and deploys to `myapp-dev`.
 - Prod Release deploys a selected image SHA to `myapp-production`.
 
-## Repository Layout
+## Repository Layout   
 
 ```
 frontend/   React app
@@ -105,7 +105,7 @@ scripts/    Cluster bootstrap utilities
 - **Pod Security Standards** — restricted mode
 - **NetworkPolicy** — default-deny + allowlist
 
-### Storage
+### Storage 
 - **PersistentVolumeClaim** — database storage
 - **volumeClaimTemplates** — per-pod PVCs in StatefulSets
 - **emptyDir** — temp storage for containers
@@ -115,7 +115,7 @@ scripts/    Cluster bootstrap utilities
 - **Prometheus metrics** — custom + default
 - **Structured logging** — JSON logs with pod metadata
 
-## Onboarding a New Developer
+## Onboarding 
 
 ```bash
 # 1. Set up their namespace
