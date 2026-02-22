@@ -66,7 +66,7 @@ export default function TaskForm({ onSubmit, onCancel }) {
           <input
             id="assigned_to"
             type="text"
-            placeholder="email@company.com"
+            placeholder="email@.com"
             value={form.assigned_to}
             onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
           />
