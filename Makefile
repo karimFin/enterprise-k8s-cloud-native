@@ -1,10 +1,11 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod
+.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod
 
-TF ?= ./.tools/terraform-1.10.5/terraform
-TF_DIR ?= terraform/oci-prod
+ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+TF ?= $(ROOT_DIR)/.tools/terraform-1.10.5/terraform
+TF_DIR ?= $(ROOT_DIR)/terraform/oci-prod
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -115,6 +116,16 @@ tf-apply-prod: ## Terraform apply for OCI prod (uses TF_VAR_* envs)
 	cd $(TF_DIR) && $(TF) apply -auto-approve
 
 tf-destroy-prod: ## Terraform destroy for OCI prod (uses TF_VAR_* envs)
+	@[ "$(CONFIRM_DESTROY)" = "prod" ] || (echo "Set CONFIRM_DESTROY=prod to run destroy" && exit 1)
+	cd $(TF_DIR) && $(TF) destroy -auto-approve
+
+tf-up-prod: ## Terraform init + plan + apply for OCI prod
+	cd $(TF_DIR) && $(TF) init
+	@[ "$(CONFIRM_APPLY)" = "prod" ] || (echo "Set CONFIRM_APPLY=prod to run apply" && exit 1)
+	cd $(TF_DIR) && $(TF) apply -auto-approve
+
+tf-down-prod: ## Terraform plan + destroy for OCI prod
+	cd $(TF_DIR) && $(TF) plan -destroy
 	@[ "$(CONFIRM_DESTROY)" = "prod" ] || (echo "Set CONFIRM_DESTROY=prod to run destroy" && exit 1)
 	cd $(TF_DIR) && $(TF) destroy -auto-approve
 
