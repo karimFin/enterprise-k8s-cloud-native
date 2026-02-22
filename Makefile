@@ -1,7 +1,10 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev
+.PHONY: help dev dev-hot build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod
+
+TF ?= ./.tools/terraform-1.10.5/terraform
+TF_DIR ?= terraform/oci-prod
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -93,3 +96,19 @@ act-build: ## Run GitHub Actions build-and-push locally (requires GHCR token)
 
 act-deploy-dev: ## Run GitHub Actions deploy-dev locally (requires GHCR token)
 	act -j deploy-dev -s GITHUB_TOKEN=$(GITHUB_TOKEN)
+
+# ─── Terraform (OCI prod) ─────────────────────────────────────
+tf-init-prod: ## Terraform init for OCI prod
+	cd $(TF_DIR) && $(TF) init
+
+tf-plan-prod: ## Terraform plan for OCI prod (uses TF_VAR_* envs)
+	cd $(TF_DIR) && $(TF) plan
+
+tf-apply-prod: ## Terraform apply for OCI prod (uses TF_VAR_* envs)
+	cd $(TF_DIR) && $(TF) apply -auto-approve
+
+tf-destroy-prod: ## Terraform destroy for OCI prod (uses TF_VAR_* envs)
+	cd $(TF_DIR) && $(TF) destroy -auto-approve
+
+tf-output-prod: ## Terraform outputs for OCI prod
+	cd $(TF_DIR) && $(TF) output
