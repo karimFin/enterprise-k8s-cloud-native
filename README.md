@@ -1,6 +1,6 @@
 # MyApp Platform
 
-Production-ready, cloud-native application with React frontend, Node.js API, and PostgreSQL. Deployed on Kubernetes with CI/CD and OCI Terraform infrastructure.
+Production-ready, cloud-native application. Deployed on Kubernetes with CI/CD and OCI Terraform infrastructure.
 
 ## Highlights
 
@@ -185,7 +185,7 @@ kubectl top pods -n myapp-production
 kubectl top nodes
 ```
 
-##  Covers
+##  WHD
 
 - Docker multi-stage builds, layer caching, security
 - K8s Deployments vs StatefulSets
