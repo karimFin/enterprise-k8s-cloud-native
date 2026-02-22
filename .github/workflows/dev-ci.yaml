@@ -133,14 +133,13 @@ jobs:
           RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DEV }}
         run: |
           if [ -z "$RAW_KUBECONFIG" ]; then
-            echo "use_kind=true" >> $GITHUB_OUTPUT
-            exit 0
+            echo "KUBE_CONFIG_DEV is not set"
+            exit 1
           fi
           if echo "$RAW_KUBECONFIG" | grep -Eq 'server:\s*https?://(127\.0\.0\.1|localhost)'; then
-            echo "use_kind=true" >> $GITHUB_OUTPUT
-            exit 0
+            echo "KUBE_CONFIG_DEV points to localhost. Use a real cluster kubeconfig."
+            exit 1
           fi
-          echo "use_kind=false" >> $GITHUB_OUTPUT
           if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
             echo "kubeconfig<<EOF" >> $GITHUB_OUTPUT
             echo "$RAW_KUBECONFIG" >> $GITHUB_OUTPUT
@@ -154,13 +153,7 @@ jobs:
       - name: Normalize IMAGE_PREFIX (lowercase owner)
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/myapp" >> $GITHUB_ENV
-      - name: Create kind cluster (dev)
-        if: steps.prep-kube-dev.outputs.use_kind == 'true'
-        uses: helm/kind-action@v1.8.0
-        with:
-          cluster_name: myapp-ci-dev
       - name: Configure kubectl
-        if: steps.prep-kube-dev.outputs.use_kind != 'true'
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
