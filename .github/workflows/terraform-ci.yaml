@@ -1,0 +1,40 @@
+name: Terraform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - terraform
+          - terraform/oci-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+      - name: Format
+        working-directory: ${{ matrix.dir }}
+        run: terraform fmt -check -recursive
+      - name: Init
+        working-directory: ${{ matrix.dir }}
+        run: terraform init -backend=false
+      - name: Validate
+        working-directory: ${{ matrix.dir }}
+        run: terraform validate
