@@ -1,0 +1,45 @@
+name: Prod Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: Commit SHA tag to deploy (from Dev CI)
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: http://207.127.93.80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imranismail/setup-kustomize@v2
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.34.2
+      - name: Configure kubeconfig
+        shell: bash
+        env:
+          RAW_KUBECONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
+        run: |
+          mkdir -p $HOME/.kube
+          if echo "$RAW_KUBECONFIG" | grep -q 'apiVersion:'; then
+            echo "$RAW_KUBECONFIG" > $HOME/.kube/config
+          else
+            echo "$RAW_KUBECONFIG" | base64 -d > $HOME/.kube/config || echo "$RAW_KUBECONFIG" | base64 --decode > $HOME/.kube/config
+          fi
+      - name: Deploy prod
+        shell: bash
+        run: |
+          OWNER_LOWER=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_BACKEND=ghcr.io/${OWNER_LOWER}/myapp-backend
+          IMAGE_FRONTEND=ghcr.io/${OWNER_LOWER}/myapp-frontend
+          cd k8s/overlays/prod
+          kustomize edit set image \
+            backend=${IMAGE_BACKEND}:${{ inputs.image_sha }} \
+            frontend=${IMAGE_FRONTEND}:${{ inputs.image_sha }}
+          kustomize build . | kubectl apply -f -
+          kubectl rollout status deployment/backend -n myapp-production --timeout=600s
+          kubectl rollout status deployment/frontend -n myapp-production --timeout=600s
