@@ -44,7 +44,7 @@ resource "oci_containerengine_node_pool" "this" {
   node_config_details {
     size = var.node_pool_size
     node_pool_pod_network_option_details {
-      cni_type = var.cni_type
+      cni_type       = var.cni_type
       pod_subnet_ids = var.node_pool_subnet_ids
     }
     dynamic "placement_configs" {
