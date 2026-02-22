@@ -20,7 +20,7 @@ services:
   backend:
     build:
       context: ./backend
-      target: builder
+      target: dev
     command: npx nodemon src/server.js
     volumes:
       - ./backend/src:/app/src
