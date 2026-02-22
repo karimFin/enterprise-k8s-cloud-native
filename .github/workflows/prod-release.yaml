@@ -33,12 +33,20 @@ jobs:
           if echo "$OCI_CONFIG" | grep -q '\[DEFAULT\]'; then
             printf '%s\n' "$OCI_CONFIG" > $HOME/.oci/config
           else
-            echo "$OCI_CONFIG" | base64 -d > $HOME/.oci/config || echo "$OCI_CONFIG" | base64 --decode > $HOME/.oci/config
+            if echo "$OCI_CONFIG" | base64 -d > $HOME/.oci/config 2>/dev/null || echo "$OCI_CONFIG" | base64 --decode > $HOME/.oci/config 2>/dev/null; then
+              true
+            else
+              printf '%s\n' "$OCI_CONFIG" > $HOME/.oci/config
+            fi
           fi
           if echo "$OCI_API_KEY" | grep -q 'BEGIN RSA PRIVATE KEY'; then
             printf '%s\n' "$OCI_API_KEY" > $HOME/.oci/oci_api_key.pem
           else
-            echo "$OCI_API_KEY" | base64 -d > $HOME/.oci/oci_api_key.pem || echo "$OCI_API_KEY" | base64 --decode > $HOME/.oci/oci_api_key.pem
+            if echo "$OCI_API_KEY" | base64 -d > $HOME/.oci/oci_api_key.pem 2>/dev/null || echo "$OCI_API_KEY" | base64 --decode > $HOME/.oci/oci_api_key.pem 2>/dev/null; then
+              true
+            else
+              printf '%s\n' "$OCI_API_KEY" > $HOME/.oci/oci_api_key.pem
+            fi
           fi
           chmod 600 $HOME/.oci/oci_api_key.pem
       - uses: imranismail/setup-kustomize@v2
