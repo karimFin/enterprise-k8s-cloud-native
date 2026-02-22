@@ -62,7 +62,7 @@ export default function TaskForm({ onSubmit, onCancel }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="assigned_to">Assign To (Email or Username)</label>
+          <label htmlFor="assigned_to">Assign To Email or Username </label>
           <input
             id="assigned_to"
             type="text"
