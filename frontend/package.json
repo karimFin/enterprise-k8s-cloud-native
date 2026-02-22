@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^5.1.4",
     "vite": "^5.0.8",
     "vitest": "^1.1.0",
     "@testing-library/react": "^14.1.2",
