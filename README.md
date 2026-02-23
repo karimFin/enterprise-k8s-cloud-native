@@ -1,4 +1,4 @@
-# MyApp Platform
+#Platform
 
 Production-ready, cloud-native application. Deployed on Kubernetes with CI/CD and OCI Terraform infrastructure.
 
@@ -17,9 +17,6 @@ Ingress → Frontend (Nginx) → Backend (Express) → PostgreSQL
 
 ![Infrastructure Architecture](docs/infra-architecture.svg)
 
-## New to DevOps
-
-See [DEVOPS_BEGINNER_GUIDE.md](DEVOPS_BEGINNER_GUIDE.md) for a step-by-step explanation with real examples and diagrams.
 ## Quick Start
 
 ### Local (Docker Compose)
