@@ -49,7 +49,7 @@ Frontend      Backend
 
 #### Frontend
 - **Type**: Deployment
-- **Replicas**: 2-3 (dev), 3 (staging), 3-10 (prod with HPA)
+- **Replicas**: 2-3 (dev), 3-10 (prod with HPA)
 - **Image**: React app built with Vite, served by Nginx
 - **Port**: 80 (internal)
 - **Resources**: 
@@ -59,7 +59,7 @@ Frontend      Backend
 
 #### Backend
 - **Type**: Deployment
-- **Replicas**: 2 (dev), 2 (staging), 3-10 (prod with HPA)
+- **Replicas**: 2 (dev), 3-10 (prod with HPA)
 - **Image**: Node.js 20 Alpine
 - **Port**: 8080
 - **Health Check**: GET /health endpoint
@@ -88,7 +88,7 @@ Frontend      Backend
 #### Auto-Scaling
 - **HPA** (Horizontal Pod Autoscaler): For backend and frontend
 - **Target**: CPU 80% utilization
-- **Min Replicas**: 2 (dev/staging), 3 (prod)
+- **Min Replicas**: 2 (dev), 3 (prod)
 - **Max Replicas**: 10 (prod)
 
 ---
@@ -193,8 +193,6 @@ k8s/
 └── overlays/
     ├── dev/
     │   └── kustomization.yaml     # Dev overrides: 1 replica, small resources
-    ├── staging/
-    │   └── kustomization.yaml     # Staging overrides: 2 replicas, medium resources
     └── prod/
         └── kustomization.yaml     # Prod overrides: 3+ replicas with HPA, large resources
 ```
@@ -339,14 +337,14 @@ docker-compose down -v           # Stop and clean up
    - Condition: Checks syntax
    - Output: Ensures K8s files are valid
 
-4. **deploy-staging-kind**: Deploy to temporary staging cluster
-   - Runs: Creates ephemeral Kind cluster, deploys app
+4. **deploy-dev**: Deploy to dev namespace
+   - Runs: Deploys to dev namespace for verification
    - Condition: Automatic on main branch push
    - Output: Tests deployment process
 
 5. **deploy-prod**: Deploy to production cluster
    - Runs: Deploys to real production cluster
-   - Condition: Automatic after staging passes (no approval needed)
+   - Condition: Automatic after dev passes (no approval needed)
    - Output: Shows frontend URL
 
 ---
@@ -361,16 +359,6 @@ docker-compose down -v           # Stop and clean up
 - **Database**: Local PostgreSQL
 - **Update Strategy**: Manual
 - **Purpose**: Quick iteration, testing locally
-
-### Staging (staging)
-- **Cluster**: Kind (ephemeral in GitHub Actions)
-- **Namespace**: myapp-staging
-- **Replicas**: 2 per service
-- **Resources**: Medium
-- **Database**: In-cluster PostgreSQL
-- **Update Strategy**: Rolling updates
-- **Duration**: Only during CI/CD workflow (temporary)
-- **Purpose**: Validate deployment process before production
 
 ### Production (prod)
 - **Cluster**: Real Kubernetes cluster (AWS/GCP/Azure/etc.)
@@ -440,9 +428,9 @@ For each service (frontend, backend):
 
 ### Step 5: Validate Kubernetes
 ```
-kustomize build k8s/overlays/staging
+kustomize build k8s/overlays/dev
   ↓
-Merges base/ + overlays/staging/
+Merges base/ + overlays/dev/
   ↓
 Outputs final YAML manifest
   ↓
@@ -452,19 +440,11 @@ If invalid → stop, show errors
 If valid → proceed to deploy
 ```
 
-### Step 6: Deploy to Staging (Kind)
+### Step 6: Deploy to Dev
 ```
-kind create cluster --name myapp-staging
+kubectl apply -k k8s/overlays/dev
   ↓
-Creates temporary 3-node Kubernetes cluster in Docker
-  ↓
-docker build images locally (in runner)
-  ↓
-kind load docker-image (load into Kind cluster)
-  ↓
-kubectl apply -k k8s/overlays/staging
-  ↓
-Kustomize merges base + staging overrides
+Kustomize merges base + dev overrides
   ↓
 kubectl deploys all resources:
   - Namespace
@@ -480,8 +460,6 @@ kubectl rollout status (wait for pods ready)
 Pods starting → pulling images → becoming ready
   ↓
 Show deployment info in logs
-  ↓
-(Then Kind cluster deleted)
 ```
 
 ### Step 7: Deploy to Production (Optional)

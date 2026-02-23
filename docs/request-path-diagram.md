@@ -79,7 +79,5 @@ Database Pod (k8s/base/postgres-statefulset.yaml)
 
 - k8s/overlays/dev/kustomization.yaml  
   Disables Ingress, reduces replicas, and removes HPA for local dev.
-- k8s/overlays/staging/kustomization.yaml  
-  Uses staging domain and image tags, keeps Ingress on.
 - k8s/overlays/prod/kustomization.yaml  
   Production domain, resource tuning, optional LoadBalancer frontend Service.

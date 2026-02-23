@@ -12,7 +12,7 @@ I've reviewed your entire codebase and created comprehensive documentation. Here
 ```
 ✅ Containerization (Docker)
 ✅ Orchestration (Kubernetes) 
-✅ Multi-environment (dev/staging/prod)
+✅ Multi-environment (dev/prod)
 ✅ High availability (3+ replicas)
 ✅ Auto-scaling (HPA)
 ✅ Zero-downtime deployments (rolling updates)
@@ -48,7 +48,6 @@ Backend:
 ✅ Docker image building
 ✅ Image security scanning (Trivy)
 ✅ Kubernetes manifest validation
-✅ Staging deployment (Kind cluster)
 ✅ Production deployment (auto, no approval needed)
 ✅ Frontend URL reporting
 ✅ Rollback on failure
@@ -151,17 +150,15 @@ Images tagged with commit SHA
 Images pushed to GHCR (GitHub Container Registry)
 ```
 
-#### ✅ **Automated Staging**
+#### ✅ **Automated Dev**
 ```bash
-Kind cluster created automatically
-Your app deployed to staging
+Dev environment deployed automatically
 Verified with health checks
-Then deleted (no leftover resources)
 ```
 
 #### ✅ **Automated Production**
 ```bash
-Staging passes → Production deploys automatically
+Dev passes → Production deploys automatically
 No manual approval needed
 Shows frontend URL on completion
 Automatic rollback if issues
@@ -218,8 +215,7 @@ Resource limits (prevent resource exhaustion)
    [Validate Kubernetes]
     Check YAML syntax
          ↓
-   [Deploy Staging]
-    Create temporary Kind cluster
+   [Deploy Dev]
     Deploy app for testing
          ↓
    [Deploy Production]
@@ -237,7 +233,7 @@ Resource limits (prevent resource exhaustion)
 |---------|---|---|
 | **Containerization** | Consistent across environments | Docker multi-stage builds |
 | **Orchestration** | Auto-healing, scaling, updates | Kubernetes with HPA |
-| **Multi-environment** | Test before production | Dev/Staging/Prod with Kustomize |
+| **Multi-environment** | Test before production | Dev/Prod with Kustomize |
 | **High Availability** | No single point of failure | 3+ replicas + load balancer |
 | **Auto-scaling** | Handle traffic spikes | HPA scales 2-10 pods |
 | **Zero-downtime deploys** | Users never see downtime | Rolling updates strategy |
@@ -374,7 +370,7 @@ Manual everything ❌
 Highly automated ✅
 - Automated testing
 - Automated building
-- Automated deployment to staging & production
+- Automated deployment to dev & production
 - Health checks (automated monitoring)
 - CI/CD pipeline (zero manual steps)
 - Low error rate (automated validation)
