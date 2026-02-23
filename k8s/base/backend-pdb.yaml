@@ -1,9 +1,11 @@
+# PodDisruptionBudget — ensures minimum availability during voluntary disruptions
+# (node drain, cluster upgrades, etc.)
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: backend-pdb
 spec:
-  minAvailable: 1
+  minAvailable: 1    # At least 1 pod must always be running
   selector:
     matchLabels:
       app: backend
