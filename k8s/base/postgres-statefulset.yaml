@@ -1,5 +1,3 @@
-# StatefulSet for PostgreSQL — provides stable network identity and persistent storage
-# In production, consider using a managed database (RDS, Cloud SQL) instead
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -19,7 +17,7 @@ spec:
     spec:
       terminationGracePeriodSeconds: 60
       securityContext:
-        runAsUser: 999       # postgres user
+        runAsUser: 999
         runAsGroup: 999
         fsGroup: 999
       containers:
@@ -63,7 +61,6 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-  # PersistentVolumeClaim template — each pod gets its own PVC
   volumeClaimTemplates:
     - metadata:
         name: postgres-data
@@ -72,4 +69,3 @@ spec:
         resources:
           requests:
             storage: 10Gi
-        # storageClassName: gp3    # Uncomment for AWS EKS

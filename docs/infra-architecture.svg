@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
   <rect width="1200" height="720" fill="#f8fafc"/>
-  <text x="40" y="48" fill="#0f172a" font-size="26" font-family="Inter, Arial, sans-serif">MyApp Infrastructure Architecture (AWS-style)</text>
+  <text x="40" y="48" fill="#0f172a" font-size="26" font-family="Inter, Arial, sans-serif">Infrastructure Architecture</text>
 
   <rect x="40" y="80" width="1120" height="600" rx="18" fill="#ffffff" stroke="#cbd5f5" stroke-width="2"/>
   <text x="70" y="115" fill="#1e293b" font-size="16" font-family="Inter, Arial, sans-serif">OCI Region</text>

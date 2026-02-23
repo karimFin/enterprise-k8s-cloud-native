@@ -1,5 +1,3 @@
-# Ingress — routes external traffic to frontend and backend services
-# Requires: nginx-ingress-controller and cert-manager installed in cluster
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,17 +5,12 @@ metadata:
   labels:
     app.kubernetes.io/part-of: myapp
   annotations:
-    # TLS via cert-manager
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    # Rate limiting
     nginx.ingress.kubernetes.io/rate-limit-connections: "5"
     nginx.ingress.kubernetes.io/rate-limit-rps: "10"
-    # Request size limit
     nginx.ingress.kubernetes.io/proxy-body-size: "5m"
-    # Timeouts
     nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
-    # HSTS
     nginx.ingress.kubernetes.io/hsts: "true"
     nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
 spec:
@@ -30,7 +23,6 @@ spec:
     - host: myapp.example.com
       http:
         paths:
-          # API routes go to backend
           - path: /api
             pathType: Prefix
             backend:
@@ -38,7 +30,6 @@ spec:
                 name: backend
                 port:
                   number: 80
-          # Health endpoints go to backend
           - path: /health
             pathType: Exact
             backend:
@@ -46,7 +37,6 @@ spec:
                 name: backend
                 port:
                   number: 80
-          # Everything else goes to frontend
           - path: /
             pathType: Prefix
             backend:

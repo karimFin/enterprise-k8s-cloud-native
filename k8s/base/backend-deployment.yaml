@@ -9,34 +9,31 @@ metadata:
     app.kubernetes.io/part-of: myapp
 spec:
   replicas: 2
-  revisionHistoryLimit: 5    # Keep 5 old ReplicaSets for rollback
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: backend
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1            # Create 1 extra pod during update
-      maxUnavailable: 0      # Never have fewer than desired replicas
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: backend
       annotations:
-        # Force rollout when configmap changes
         checksum/config: "placeholder"
     spec:
       serviceAccountName: backend-sa
       terminationGracePeriodSeconds: 30
 
-      # Pod Security Context
       securityContext:
         runAsNonRoot: true
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
 
-      # Anti-affinity: spread pods across nodes for high availability
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -51,7 +48,7 @@ spec:
 
       containers:
         - name: backend
-          image: backend:latest   # Overridden by Kustomize per environment
+          image: backend:latest
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -59,12 +56,10 @@ spec:
               containerPort: 8080
               protocol: TCP
 
-          # Environment from ConfigMap
           envFrom:
             - configMapRef:
                 name: app-config
 
-          # Sensitive env from Secret
           env:
             - name: DB_HOST
               valueFrom:
@@ -82,7 +77,6 @@ spec:
                   name: db-credentials
                   key: DB_PASSWORD
 
-          # Container Security Context
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -91,27 +85,23 @@ spec:
             capabilities:
               drop: ["ALL"]
 
-          # Resource management — CRITICAL for K8s scheduling
           resources:
-            requests:              # Guaranteed resources (used for scheduling)
+            requests:
               cpu: 100m
               memory: 128Mi
-            limits:                # Maximum allowed (OOMKilled if exceeded)
+            limits:
               cpu: 500m
               memory: 512Mi
 
-          # Startup probe — give the app time to connect to DB and run migrations
-          # K8s won't send liveness/readiness until startup succeeds
           startupProbe:
             httpGet:
               path: /startup
               port: http
-            failureThreshold: 60   # 60 × 2s = 2 min (Postgres + migrations can be slow on cold start)
+            failureThreshold: 60
             periodSeconds: 2
             initialDelaySeconds: 5
             timeoutSeconds: 3
 
-          # Liveness probe — restart if the app hangs
           livenessProbe:
             httpGet:
               path: /health
@@ -121,7 +111,6 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
 
-          # Readiness probe — remove from Service if not ready
           readinessProbe:
             httpGet:
               path: /ready
@@ -131,14 +120,11 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 2
 
-          # Graceful shutdown: sleep lets K8s remove pod from Service endpoints
-          # before the app starts shutting down
           lifecycle:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 5"]
 
-          # Temp directory for non-root writable filesystem
           volumeMounts:
             - name: tmp
               mountPath: /tmp

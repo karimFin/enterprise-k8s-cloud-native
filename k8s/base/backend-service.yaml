@@ -11,5 +11,5 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: http    # References the named port in the Deployment
+      targetPort: http
       protocol: TCP

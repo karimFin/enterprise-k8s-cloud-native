@@ -1,8 +1,3 @@
-# Network Policies — micro-segmentation at the network level
-# Only allows traffic between services that need to communicate.
-# Default deny + explicit allow = zero-trust networking
-
-# Default: deny all traffic in the namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -13,7 +8,6 @@ spec:
     - Ingress
     - Egress
 ---
-# Allow DNS resolution (required for all pods)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -30,7 +24,6 @@ spec:
         - port: 53
           protocol: TCP
 ---
-# Frontend: allow ingress from ingress controller, egress to backend
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -57,7 +50,6 @@ spec:
       ports:
         - port: 8080
 ---
-# Backend: allow ingress from frontend and ingress controller, egress to postgres
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -87,7 +79,6 @@ spec:
       ports:
         - port: 5432
 ---
-# Postgres: only allow ingress from backend
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
