@@ -4,6 +4,8 @@
 
 ![Request Path Animation](request-path.gif)
 
+![Full Request Path Animation](request-path-full.gif)
+
 ```text
 Client
   │
