@@ -2,6 +2,15 @@
 
 ## End-to-End Flow
 
+![Request Path Animation](request-path.gif)
+
+![Full Request Path Animation](request-path-full.gif)
+
+## Terraform and CI/CD Animations
+
+![Terraform Infrastructure Flow](terraform-flow.gif)
+
+![CI/CD Deployment Flow](cicd-flow.gif)
 ```text
 Client
   │
