@@ -15,6 +15,8 @@ Production-ready, cloud-native application. Deployed on Kubernetes with CI/CD an
 
 Ingress → Frontend (Nginx) → Backend (Express) → PostgreSQL
 
+![Infrastructure Architecture](docs/infra-architecture.svg)
+
 ## Quick Start
 
 ### Local (Docker Compose)
