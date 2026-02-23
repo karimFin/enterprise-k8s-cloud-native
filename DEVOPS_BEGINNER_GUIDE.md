@@ -8,7 +8,7 @@ Terraform creates the infrastructure in the cloud, and Kubernetes runs the appli
 
 - Terraform provisions the OCI network and the OKE Kubernetes cluster.
 - Kubernetes manifests describe the app workloads (frontend, backend, database) and services.
-- Kustomize overlays apply environment-specific differences (dev, staging, prod).
+- Kustomize overlays apply environment-specific differences (dev, prod).
 - CI builds container images and deploys them into the correct namespace.
 - Kubernetes controllers keep the desired number of pods running and healthy.
 
