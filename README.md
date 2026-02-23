@@ -74,6 +74,9 @@ Terraform manages the production cluster in `terraform/oci-prod`.
 make tf-init-prod
 make tf-plan-prod
 CONFIRM_APPLY=prod make tf-apply-prod
+
+# Single command: init + apply
+CONFIRM_APPLY=prod make tf-recreate-prod
 ```
 
 ### Destroy
@@ -85,10 +88,42 @@ CONFIRM_DESTROY=prod make tf-destroy-prod
 
 To have a separate dev cluster, create a new Terraform folder (e.g. `terraform/oci-dev`) with its own backend state.
 
+## Cost Optimization (Sleep/Wake)
+
+Use these to stop everything when idle and bring it back when needed.
+
+```bash
+# Stop workloads, remove public LBs, scale node pool to 0
+make sleep-cloud
+
+# Bring node pool back and re-apply dev + prod
+make wake-cloud
+```
+
+Notes:
+- `sleep-cloud` ignores missing services so it can be run repeatedly.
+- External IPs change after `wake-cloud`; always re-check Service IPs.
+
+## Operations Shortcuts
+
+```bash
+make k8s-status
+make deploy-dev
+make deploy-prod
+make tf-output-prod
+```
+
+```bash
+kubectl get svc frontend -n myapp-dev
+kubectl get svc frontend -n myapp-production
+kubectl rollout status deployment/backend -n myapp-production
+```
+
 ## CI/CD
 
 - Dev CI builds, tests, and deploys to `myapp-dev`.
 - Prod Release deploys a selected image SHA to `myapp-production`.
+- CI/CD uses a reusable workflow in `.github/workflows/reusable-cicd.yaml` for test → build → deploy.
 - Terraform CI validates and formats IaC changes.
 - Dependabot keeps dependencies updated weekly.
 
@@ -102,6 +137,10 @@ terraform/  OCI infrastructure
 .github/    CI/CD workflows
 scripts/    Cluster bootstrap utilities
 ```
+
+## Operations Playbook
+
+See [OPERATIONS_PLAYBOOK.md](OPERATIONS_PLAYBOOK.md) for day-to-day commands.
 - **ServiceAccount** — pod identity
 - **SecurityContext** — non-root, read-only FS, drop capabilities
 - **Pod Security Standards** — restricted mode
@@ -158,6 +197,10 @@ PR opened → Test (unit tests) → Security scan (Trivy)
 ```bash
 # View all resources
 kubectl get all -n myapp-production
+
+# Check external IPs
+kubectl get svc frontend -n myapp-dev
+kubectl get svc frontend -n myapp-production
 
 # Check logs
 kubectl logs -f deployment/backend -n myapp-production

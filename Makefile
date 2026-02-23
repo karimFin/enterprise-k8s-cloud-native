@@ -1,7 +1,7 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod
+.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod tf-recreate-prod sleep-cloud wake-cloud
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 TF ?= $(ROOT_DIR)/.tools/terraform-1.10.5/terraform
@@ -96,13 +96,13 @@ clean: ## Remove build artifacts and containers
 
 # ─── Local GitHub Actions (act) ───────────────────────────────
 act-test: ## Run GitHub Actions test job locally
-	act -j test
+	act -W .github/workflows/dev-ci.yaml -j pipeline
 
 act-build: ## Run GitHub Actions build-and-push locally (requires GHCR token)
-	act -j build-and-push -s GITHUB_TOKEN=$(GITHUB_TOKEN)
+	act -W .github/workflows/dev-ci.yaml -j pipeline -s GITHUB_TOKEN=$(GITHUB_TOKEN)
 
 act-deploy-dev: ## Run GitHub Actions deploy-dev locally (requires GHCR token)
-	act -j deploy-dev -s GITHUB_TOKEN=$(GITHUB_TOKEN)
+	GITHUB_EVENT_NAME=push GITHUB_REF=refs/heads/dev act -W .github/workflows/dev-ci.yaml -j pipeline -s GITHUB_TOKEN=$(GITHUB_TOKEN)
 
 # ─── Terraform (OCI prod) ─────────────────────────────────────
 tf-init-prod: ## Terraform init for OCI prod
@@ -124,6 +124,11 @@ tf-up-prod: ## Terraform init + plan + apply for OCI prod
 	@[ "$(CONFIRM_APPLY)" = "prod" ] || (echo "Set CONFIRM_APPLY=prod to run apply" && exit 1)
 	cd $(TF_DIR) && $(TF) apply -auto-approve
 
+tf-recreate-prod: ## Terraform init + apply for OCI prod
+	cd $(TF_DIR) && $(TF) init
+	@[ "$(CONFIRM_APPLY)" = "prod" ] || (echo "Set CONFIRM_APPLY=prod to run apply" && exit 1)
+	cd $(TF_DIR) && $(TF) apply -auto-approve
+
 tf-down-prod: ## Terraform plan + destroy for OCI prod
 	cd $(TF_DIR) && $(TF) plan -destroy
 	@[ "$(CONFIRM_DESTROY)" = "prod" ] || (echo "Set CONFIRM_DESTROY=prod to run destroy" && exit 1)
@@ -131,3 +136,17 @@ tf-down-prod: ## Terraform plan + destroy for OCI prod
 
 tf-output-prod: ## Terraform outputs for OCI prod
 	cd $(TF_DIR) && $(TF) output
+
+sleep-cloud:
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-dev
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-production
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq scale deployment backend frontend --replicas=0 -n myapp-dev
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq scale statefulset postgres --replicas=0 -n myapp-dev
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq scale deployment backend frontend --replicas=0 -n myapp-production
+	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq scale statefulset postgres --replicas=0 -n myapp-production
+	cd $(TF_DIR) && $(TF) apply -auto-approve -var node_pool_size=0
+
+wake-cloud:
+	cd $(TF_DIR) && $(TF) apply -auto-approve -var node_pool_size=1
+	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/k8s/overlays/dev
+	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/k8s/overlays/prod
