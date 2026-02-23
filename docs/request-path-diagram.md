@@ -2,6 +2,8 @@
 
 ## End-to-End Flow
 
+![Request Path Animation](request-path.gif)
+
 ```text
 Client
   │
