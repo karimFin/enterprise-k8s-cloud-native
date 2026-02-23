@@ -1,7 +1,7 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod tf-recreate-prod sleep-cloud wake-cloud
+.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod tf-recreate-prod monitoring-up monitoring-url sleep-cloud wake-cloud
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 TF ?= $(ROOT_DIR)/.tools/terraform-1.10.5/terraform
@@ -137,6 +137,12 @@ tf-down-prod: ## Terraform plan + destroy for OCI prod
 tf-output-prod: ## Terraform outputs for OCI prod
 	cd $(TF_DIR) && $(TF) output
 
+monitoring-up: ## Apply Terraform with monitoring enabled
+	@[ "$(CONFIRM_APPLY)" = "prod" ] || (echo "Set CONFIRM_APPLY=prod to run apply" && exit 1)
+	cd $(TF_DIR) && $(TF) apply -auto-approve -var enable_monitoring=true
+
+monitoring-url: ## Port-forward Grafana to localhost:3001
+	kubectl -n monitoring port-forward svc/monitoring-grafana 3001:80
 sleep-cloud:
 	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-dev
 	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-production

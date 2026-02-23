@@ -9,3 +9,4 @@ node_pool_ocpus      = 1
 node_pool_memory_gbs = 8
 enable_prod_deploy   = false
 node_image_id        = "ocid1.image.oc1.eu-stockholm-1.aaaaaaaa5f7q6jj7qpxr6rlxxaptosnvakv675f2xoggrheerog42b2jgxnq"
+enable_monitoring    = true

@@ -103,3 +103,24 @@ variable "enable_prod_deploy" {
   type    = bool
   default = false
 }
+
+variable "enable_monitoring" {
+  type    = bool
+  default = false
+}
+
+variable "monitoring_chart_version" {
+  type    = string
+  default = "55.5.0"
+}
+
+variable "prometheus_retention" {
+  type    = string
+  default = "7d"
+}
+
+variable "grafana_admin_password" {
+  type      = string
+  default   = null
+  sensitive = true
+}

@@ -76,6 +76,16 @@ kubectl port-forward svc/frontend 3000:80 -n myapp-dev
 kubectl port-forward svc/backend 8080:80 -n myapp-dev
 ```
 
+## Monitoring (Grafana)
+
+```bash
+CONFIRM_APPLY=prod make monitoring-up
+make monitoring-url
+```
+
+```bash
+kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+```
 ## Terraform (OCI)
 
 ```bash
