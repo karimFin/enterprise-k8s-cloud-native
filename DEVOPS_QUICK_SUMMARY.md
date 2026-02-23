@@ -68,8 +68,7 @@ You push code to main branch
     └────┬──────────┘
          │
     ┌────▼─────────────────────┐
-    │ Deploy to Staging (Kind) │  ← Temporary cluster
-    │   - Create cluster       │
+    │ Deploy to Dev            │
     │   - Deploy app           │
     │   - Health checks        │
     └────┬─────────────────────┘
@@ -127,7 +126,7 @@ Test:       npm test          ✅ PASS
 Build:      docker build      ✅ IMAGE: abc123
 Push:       docker push       ✅ → GHCR
 Validate:   kustomize build   ✅ VALID
-Stage:      Kind cluster      ✅ DEPLOYED
+Dev:        Dev namespace     ✅ DEPLOYED
 Prod:       Real cluster      ✅ DEPLOYED
 ```
 
@@ -308,7 +307,7 @@ Layer 4: Secrets
 - Local development with Docker Compose
 - Automated testing
 - Building & pushing images
-- Deploying to staging for testing
+- Deploying to dev for testing
 - Deploying to production
 - Monitoring and troubleshooting
 
@@ -320,7 +319,7 @@ Layer 4: Secrets
 - [ ] Run `docker-compose up` locally
 - [ ] Make code changes and test locally
 - [ ] Push to main and watch CI/CD run
-- [ ] Check staging deployment in workflow logs
+- [ ] Check dev deployment in workflow logs
 - [ ] Read basic Kubernetes docs
 
 ### Week 3-4: Go Deeper
@@ -362,7 +361,7 @@ Old version running   →    kubectl rollout undo
 "Release fast, fail safely, learn quickly"
 
 Faster Releases  ← Automation (GitHub Actions)
-Safe Releases    ← Tests + Staging
+Safe Releases    ← Tests + Dev
 Learn Quickly    ← Logs + Monitoring + Alerts
 ```
 
@@ -379,7 +378,7 @@ Your setup includes:
 - ✅ Zero-downtime Updates (Rolling updates)
 - ✅ Security (Network policies, RBAC)
 - ✅ Monitoring (Health checks)
-- ✅ Multi-environment Support (Dev/Staging/Prod)
+- ✅ Multi-environment Support (Dev/Prod)
 
 This is enterprise-grade DevOps infrastructure! 🚀
 

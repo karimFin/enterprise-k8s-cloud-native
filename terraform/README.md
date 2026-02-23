@@ -4,7 +4,7 @@ This adds Terraform for cluster add-ons and namespaces.
 
 ## What it manages
 
-- Namespaces: myapp-dev, myapp-staging, myapp-production
+- Namespaces: myapp-dev, myapp-production
 - Optional Helm installs: ingress-nginx, cert-manager, metrics-server, monitoring
 
 ## Prerequisites

@@ -10,7 +10,7 @@ variable "kubeconfig_context" {
 
 variable "namespaces" {
   type    = list(string)
-  default = ["myapp-dev", "myapp-staging", "myapp-production"]
+  default = ["myapp-dev", "myapp-production"]
 }
 
 variable "enable_ingress_nginx" {

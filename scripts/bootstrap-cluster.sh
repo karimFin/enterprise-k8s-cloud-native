@@ -91,7 +91,7 @@ echo "   Login: admin / admin"
 # ─── 5. Create application namespaces ─────────────────────────
 echo ""
 echo "📁 Creating application namespaces..."
-for ns in myapp-dev myapp-staging myapp-production; do
+for ns in myapp-dev myapp-production; do
   kubectl create namespace $ns --dry-run=client -o yaml | kubectl apply -f -
   echo "  Created: $ns"
 done

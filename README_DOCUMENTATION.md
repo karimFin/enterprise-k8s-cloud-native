@@ -111,7 +111,7 @@ Welcome! This folder contains comprehensive documentation for your DevOps setup.
 - Directory structure explained
 - Docker & Docker Compose details
 - CI/CD workflow steps
-- Deployment environments (dev/staging/prod)
+- Deployment environments (dev/prod)
 - Configuration files explained
 - Health checks
 - Monitoring setup

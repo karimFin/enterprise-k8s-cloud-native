@@ -24,7 +24,7 @@
 
   <rect x="140" y="500" width="430" height="90" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
   <text x="355" y="552" fill="#312e81" font-size="12" text-anchor="middle" font-family="Inter, Arial, sans-serif">K8s Namespaces</text>
-  <text x="355" y="570" fill="#312e81" font-size="11" text-anchor="middle" font-family="Inter, Arial, sans-serif">dev / staging / prod</text>
+  <text x="355" y="570" fill="#312e81" font-size="11" text-anchor="middle" font-family="Inter, Arial, sans-serif">dev / prod</text>
 
   <rect x="630" y="185" width="470" height="430" rx="14" fill="#ffffff" stroke="#a5b4fc" stroke-width="2"/>
   <text x="650" y="215" fill="#1e293b" font-size="14" font-family="Inter, Arial, sans-serif">Private Subnet</text>

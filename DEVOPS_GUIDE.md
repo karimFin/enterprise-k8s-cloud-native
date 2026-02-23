@@ -69,7 +69,6 @@ myappl/
 │   │   └── kustomization.yaml
 │   └── overlays/          ← Environment-specific overrides
 │       ├── dev/
-│       ├── staging/
 │       └── prod/
 │
 ├── .github/
@@ -130,7 +129,7 @@ Frontend    Backend
 - Stores all application data (tasks, users, etc.)
 - **StatefulSet** (not Deployment): Maintains persistent identity and storage
 - **Persistent Volume**: Data survives pod restarts
-- Single instance in staging, replicated in production
+- Single instance in dev, replicated in production
 
 ---
 
@@ -294,7 +293,6 @@ spec:
 #### Problem
 You have the same application running in multiple environments:
 - **Dev**: 1 backend pod, small resources
-- **Staging**: 2 backend pods, medium resources
 - **Prod**: 10 backend pods, large resources
 
 Copy-pasting YAML files for each environment = maintenance nightmare 😱
@@ -315,8 +313,6 @@ k8s/
 └── overlays/
     ├── dev/
     │   └── kustomization.yaml       # Override: 1 replica, small resources
-    ├── staging/
-    │   └── kustomization.yaml       # Override: 2 replicas, medium resources
     └── prod/
         └── kustomization.yaml       # Override: 3-10 replicas, large resources
 ```
@@ -351,7 +347,7 @@ patches:
 ### What is CI/CD?
 
 - **CI (Continuous Integration)**: Automatically test code when pushed
-- **CD (Continuous Deployment)**: Automatically deploy to staging/production
+- **CD (Continuous Deployment)**: Automatically deploy to dev/production
 
 ### Our Pipeline (GitHub Actions)
 
@@ -370,9 +366,7 @@ Developer pushes code to main branch
 [Validate K8s] - Check Kubernetes manifests
     └─ Validate YAML files
         ↓
-[Deploy to Staging] - Deploy to Kind cluster (test environment)
-    ├─ Create temporary Kind cluster
-    ├─ Load images into Kind
+[Deploy to Dev] - Deploy to dev namespace (test environment)
     ├─ Deploy using Kustomize
     └─ Verify deployment
         ↓
@@ -413,16 +407,14 @@ jobs:
       - run: docker build -t myapp-backend:${{ github.sha }} ./backend
       - run: docker push ghcr.io/myapp-backend:${{ github.sha }}
 
-  deploy-staging-kind:      # Job 3: Deploy to staging (ephemeral)
+  deploy-dev:               # Job 3: Deploy to dev
     needs: [build-and-push]
     runs-on: ubuntu-latest
     steps:
-      - run: kind create cluster
-      - run: kind load docker-image myapp-backend
-      - run: kubectl apply -k k8s/overlays/staging
+      - run: kubectl apply -k k8s/overlays/dev
 
   deploy-prod:              # Job 4: Deploy to production
-    needs: deploy-staging-kind
+    needs: deploy-dev
     runs-on: ubuntu-latest
     steps:
       - run: kubectl apply -k k8s/overlays/prod
@@ -430,15 +422,9 @@ jobs:
 
 ### Deployment Strategy
 
-#### **Staging (Kind Cluster)**
-- Ephemeral (temporary) cluster created in GitHub Actions
-- Runs only during workflow (then deleted)
-- Tests that your app deploys without errors
-- **No manual approval needed**
-
 #### **Production**
 - Real cluster (once you configure KUBE_CONFIG_PROD)
-- Manual approval not needed (automatic after staging passes)
+- Manual approval not needed (automatic after dev passes)
 - Shows frontend URL for testing
 
 ---
@@ -593,10 +579,10 @@ gcloud container clusters get-credentials myapp-prod
 kubectl apply -k k8s/overlays/prod
 ```
 
-#### Our Staging (Kind)
+#### Our Dev (Kind)
 ```bash
 # Kind creates cluster in Docker
-kind create cluster --name myapp-staging --node-image kindest/node:v1.28.0
+kind create cluster --name myapp-dev --node-image kindest/node:v1.28.0
 # Temporary cluster for testing in CI/CD
 ```
 
@@ -641,8 +627,7 @@ kubectl port-forward svc/frontend 3000:80 -n myapp-production
 kubectl get namespaces
 
 # Our namespaces:
-# - myapp-dev      (development)
-# - myapp-staging  (testing)
+# - myapp-dev        (development)
 # - myapp-production (production)
 
 # All resources are isolated per namespace
@@ -684,7 +669,7 @@ GitHub Actions automatically:
 1. **Tests**: Run npm test
 2. **Builds**: Create Docker images
 3. **Pushes**: Upload to GHCR
-4. **Deploys Staging**: Deploy to temporary Kind cluster
+4. **Deploys Dev**: Deploy to dev namespace
 5. **Validates**: Health checks pass
 6. **Deploys Prod**: (automatic, no approval needed currently)
 7. **Reports**: Shows frontend URL
@@ -1070,7 +1055,7 @@ Zero downtime ✅
 
 - [ ] Tests passing
 - [ ] Security scanning passing
-- [ ] Staging deployment successful
+- [ ] Dev deployment successful
 - [ ] Health checks configured
 - [ ] Resource limits set
 - [ ] Persistent storage for data

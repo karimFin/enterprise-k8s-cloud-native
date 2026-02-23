@@ -58,7 +58,6 @@ kubectl port-forward svc/backend 8080:80 -n myapp-dev
 
 Current setup uses one cluster with namespaces:
 - Dev: `myapp-dev`
-- Staging: `myapp-staging`
 - Prod: `myapp-production`
 
 Destroying the cluster removes all namespaces.
@@ -188,7 +187,7 @@ PR opened → Test (unit tests) → Security scan (Trivy)
                                     Push to GHCR
                                     Tag with commit SHA
                                               │
-                                    Deploy to Staging
+                                    Deploy to Dev
                                     Rollout status check
                                     Smoke test
                                               │
