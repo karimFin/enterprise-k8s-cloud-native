@@ -1,7 +1,7 @@
 # ─── MyApp Makefile ────────────────────────────────────────────
 # Common commands for development and operations. Run `make help` for details.
 
-.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-staging deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod tf-recreate-prod monitoring-up monitoring-url sleep-cloud wake-cloud
+.PHONY: help dev dev-hot dev-hot-logs dev-hot-open build test clean deploy-dev deploy-prod act-test act-build act-deploy-dev tf-init-prod tf-plan-prod tf-apply-prod tf-destroy-prod tf-output-prod tf-up-prod tf-down-prod tf-recreate-prod monitoring-up monitoring-url sleep-cloud wake-cloud
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 TF ?= $(ROOT_DIR)/.tools/terraform-1.10.5/terraform
@@ -57,15 +57,11 @@ test-frontend: ## Run frontend tests
 deploy-dev: ## Deploy to dev namespace
 	kubectl apply -k k8s/overlays/dev
 
-deploy-staging: ## Deploy to staging namespace
-	kubectl apply -k k8s/overlays/staging
-
 deploy-prod: ## Deploy to production namespace
 	kubectl apply -k k8s/overlays/prod
 
 k8s-status: ## Show all resources in all namespaces
 	@echo "=== Dev ===" && kubectl get all -n myapp-dev 2>/dev/null || true
-	@echo "\n=== Staging ===" && kubectl get all -n myapp-staging 2>/dev/null || true
 	@echo "\n=== Production ===" && kubectl get all -n myapp-production 2>/dev/null || true
 
 # ─── Cluster Setup ────────────────────────────────────────────
