@@ -86,7 +86,6 @@ make monitoring-url
 ```bash
 kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
 ```
-
 ## Terraform (OCI)
 
 ```bash

@@ -143,7 +143,6 @@ monitoring-up: ## Apply Terraform with monitoring enabled
 
 monitoring-url: ## Port-forward Grafana to localhost:3001
 	kubectl -n monitoring port-forward svc/monitoring-grafana 3001:80
-
 sleep-cloud:
 	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-dev
 	-kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq delete svc frontend -n myapp-production
