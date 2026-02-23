@@ -74,6 +74,9 @@ Terraform manages the production cluster in `terraform/oci-prod`.
 make tf-init-prod
 make tf-plan-prod
 CONFIRM_APPLY=prod make tf-apply-prod
+
+# Single command: init + apply
+CONFIRM_APPLY=prod make tf-recreate-prod
 ```
 
 ### Destroy
