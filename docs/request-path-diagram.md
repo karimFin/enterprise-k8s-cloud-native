@@ -11,7 +11,6 @@
 ![Terraform Infrastructure Flow](terraform-flow.gif)
 
 ![CI/CD Deployment Flow](cicd-flow.gif)
-
 ```text
 Client
   │
