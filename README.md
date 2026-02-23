@@ -20,7 +20,6 @@ Ingress → Frontend (Nginx) → Backend (Express) → PostgreSQL
 ## New to DevOps
 
 See [DEVOPS_BEGINNER_GUIDE.md](DEVOPS_BEGINNER_GUIDE.md) for a step-by-step explanation with real examples and diagrams.
-
 ## Quick Start
 
 ### Local (Docker Compose)
