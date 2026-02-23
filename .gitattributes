@@ -1,19 +1,19 @@
-# Hint Linguist to count these file types towards repository language stats
-# Mark Dockerfiles explicitly
+# 1. Force HCL to be the primary language
+*.tf linguist-language=HCL
+*.hcl linguist-language=HCL
+
+# 2. Treat JavaScript as documentation or vendored 
+# This removes them from the language percentage bar entirely
+*.js linguist-vendored
+*.jsx linguist-vendored
+**/node_modules/* linguist-vendored
+
+# 3. Your existing overrides
 Dockerfile linguist-language=Dockerfile
 **/Dockerfile linguist-language=Dockerfile
-
-# Shell scripts
 *.sh linguist-language=Shell
 scripts/** linguist-language=Shell
-
-# Makefiles
 Makefile linguist-language=Makefile
 **/Makefile linguist-language=Makefile
 *.mk linguist-language=Makefile
-
-# Large linguist hint file (counts as Makefile for language stats)
 LINGUIST_MAKEFILE linguist-language=Makefile
-
-# (Optional) If some JS is generated/vendor you can mark it to reduce JS share:
-# path/to/generated/** linguist-vendored
