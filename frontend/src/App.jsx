@@ -229,8 +229,8 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>📋 Task Manager v2</h1>
-        <p className="subtitle">Full-Stack Kubernetes Demo</p>
+        <h1>📋</h1>
+        <p className="subtitle">k8s cloud native</p>
       </header>
 
       {error && (
