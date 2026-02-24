@@ -65,7 +65,7 @@ patches:
         CORS_ORIGIN: http://localhost:3000
         QDRANT_URL: http://qdrant:6333
         QDRANT_COLLECTION: tasks
-        LLM_PROVIDER: openai
+        LLM_PROVIDER: mock
         LLM_MODEL: gpt-4o-mini
         LLM_EMBED_MODEL: text-embedding-3-small
         LLM_API_BASE: https://api.openai.com/v1
