@@ -4,6 +4,7 @@ import TaskForm from './components/TaskForm';
 import Stats from './components/Stats';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -20,6 +21,28 @@ export default function App() {
   const [llmError, setLlmError] = useState(null);
   const [llmIndexing, setLlmIndexing] = useState(false);
   const [llmIndexedCount, setLlmIndexedCount] = useState(null);
+  const [llmUsage, setLlmUsage] = useState(null);
+  const [llmUsageLoading, setLlmUsageLoading] = useState(false);
+  const [llmEval, setLlmEval] = useState(null);
+  const [llmEvalLoading, setLlmEvalLoading] = useState(false);
+
+  const buildHeaders = (includeJson = true) => {
+    const headers = {};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (API_KEY) {
+      headers['X-API-Key'] = API_KEY;
+    }
+    return headers;
+  };
+
+  const formatUsd = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return '0.0000';
+    }
+    return Number(value).toFixed(4);
+  };
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -48,10 +71,27 @@ export default function App() {
     }
   }, []);
 
+  const fetchLlmUsage = useCallback(async () => {
+    try {
+      setLlmUsageLoading(true);
+      const res = await fetch(`${API_BASE}/api/llm/usage`, {
+        headers: buildHeaders(false),
+      });
+      if (!res.ok) throw new Error('Usage fetch failed');
+      const data = await res.json();
+      setLlmUsage(data);
+    } catch (err) {
+      setLlmError(err.message);
+    } finally {
+      setLlmUsageLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTasks();
     fetchStats();
-  }, [fetchTasks, fetchStats]);
+    fetchLlmUsage();
+  }, [fetchTasks, fetchStats, fetchLlmUsage]);
 
   const createTask = async (task) => {
     try {
@@ -95,19 +135,25 @@ export default function App() {
     }
   };
 
-  const runSearch = async () => {
+  const runSearch = async (didReindex = false) => {
     if (!llmQuery.trim()) return;
     try {
       setLlmLoading(true);
       setLlmError(null);
       const res = await fetch(`${API_BASE}/api/llm/search`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildHeaders(),
         body: JSON.stringify({ query: llmQuery.trim(), limit: 5 }),
       });
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
-      setLlmMatches(data.matches || []);
+      const matches = data.matches || [];
+      setLlmMatches(matches);
+      fetchLlmUsage();
+      if (matches.length === 0 && llmIndexedCount === null && !didReindex) {
+        await reindexTasks();
+        await runSearch(true);
+      }
     } catch (err) {
       setLlmError(err.message);
     } finally {
@@ -115,20 +161,25 @@ export default function App() {
     }
   };
 
-  const askAssistant = async () => {
+  const askAssistant = async (didReindex = false) => {
     if (!llmQuestion.trim()) return;
     try {
       setLlmLoading(true);
       setLlmError(null);
       const res = await fetch(`${API_BASE}/api/llm/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildHeaders(),
         body: JSON.stringify({ question: llmQuestion.trim(), limit: 5 }),
       });
       if (!res.ok) throw new Error('Assistant failed');
       const data = await res.json();
       setLlmAnswer(data.answer || '');
       setLlmMatches(data.sources || []);
+      fetchLlmUsage();
+      if ((data.sources || []).length === 0 && llmIndexedCount === null && !didReindex) {
+        await reindexTasks();
+        await askAssistant(true);
+      }
     } catch (err) {
       setLlmError(err.message);
     } finally {
@@ -142,15 +193,36 @@ export default function App() {
       setLlmError(null);
       const res = await fetch(`${API_BASE}/api/llm/reindex`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildHeaders(),
       });
       if (!res.ok) throw new Error('Reindex failed');
       const data = await res.json();
       setLlmIndexedCount(data.indexed);
+      fetchLlmUsage();
     } catch (err) {
       setLlmError(err.message);
     } finally {
       setLlmIndexing(false);
+    }
+  };
+
+  const runEval = async () => {
+    try {
+      setLlmEvalLoading(true);
+      setLlmError(null);
+      const res = await fetch(`${API_BASE}/api/llm/eval`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({ limit: 5 }),
+      });
+      if (!res.ok) throw new Error('Eval failed');
+      const data = await res.json();
+      setLlmEval(data);
+      fetchLlmUsage();
+    } catch (err) {
+      setLlmError(err.message);
+    } finally {
+      setLlmEvalLoading(false);
     }
   };
 
@@ -173,9 +245,57 @@ export default function App() {
       <section className="llm-panel">
         <div className="llm-header">
           <h2>LLM Search & Assistant</h2>
-          <button className="btn btn-sm" onClick={reindexTasks} disabled={llmIndexing}>
-            {llmIndexing ? 'Indexing...' : 'Index Tasks'}
-          </button>
+          <div className="llm-header-actions">
+            <button className="btn btn-sm" onClick={reindexTasks} disabled={llmIndexing}>
+              {llmIndexing ? 'Indexing...' : 'Index Tasks'}
+            </button>
+            <button className="btn btn-sm" onClick={runEval} disabled={llmEvalLoading}>
+              {llmEvalLoading ? 'Running Eval...' : 'Run Eval'}
+            </button>
+          </div>
+        </div>
+
+        <div className="llm-usage">
+          <div className="llm-usage-grid">
+            <div>
+              <div className="llm-usage-label">Requests</div>
+              <div className="llm-usage-value">
+                {llmUsageLoading ? '...' : llmUsage?.requestsTotal ?? '-'}
+              </div>
+            </div>
+            <div>
+              <div className="llm-usage-label">Tokens In</div>
+              <div className="llm-usage-value">
+                {llmUsageLoading ? '...' : llmUsage?.tokensInTotal ?? '-'}
+              </div>
+            </div>
+            <div>
+              <div className="llm-usage-label">Tokens Out</div>
+              <div className="llm-usage-value">
+                {llmUsageLoading ? '...' : llmUsage?.tokensOutTotal ?? '-'}
+              </div>
+            </div>
+            <div>
+              <div className="llm-usage-label">Chat Cost</div>
+              <div className="llm-usage-value">
+                ${llmUsageLoading ? '...' : formatUsd(llmUsage?.costUsdTotal)}
+              </div>
+            </div>
+            <div>
+              <div className="llm-usage-label">Embed Cost</div>
+              <div className="llm-usage-value">
+                ${llmUsageLoading ? '...' : formatUsd(llmUsage?.embedCostUsdTotal)}
+              </div>
+            </div>
+          </div>
+          <div className="llm-usage-meta">
+            Model mix:{' '}
+            {llmUsage?.models && Object.keys(llmUsage.models).length > 0
+              ? Object.entries(llmUsage.models)
+                  .map(([model, count]) => `${model} (${count})`)
+                  .join(', ')
+              : 'n/a'}
+          </div>
         </div>
 
         <div className="llm-row">
@@ -207,6 +327,11 @@ export default function App() {
         {llmError && <div className="llm-error">⚠️ {llmError}</div>}
         {llmIndexedCount !== null && (
           <div className="llm-meta">Indexed tasks: {llmIndexedCount}</div>
+        )}
+        {llmEval && (
+          <div className="llm-eval">
+            Eval pass rate: {llmEval.passRate} ({llmEval.passed}/{llmEval.total})
+          </div>
         )}
         {llmAnswer && <div className="llm-answer">{llmAnswer}</div>}
 
