@@ -50,15 +50,36 @@ function mockEmbedding(text) {
 }
 
 async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
-  if (!res.ok) {
+  const { retry } = options;
+  const fetchOptions = { ...options };
+  delete fetchOptions.retry;
+
+  const retries = retry?.retries ?? 0;
+  const minDelayMs = retry?.minDelayMs ?? 200;
+  const maxDelayMs = retry?.maxDelayMs ?? 1500;
+  let attempt = 0;
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  while (true) {
+    const res = await fetch(url, fetchOptions);
+    if (res.ok) {
+      return res.json();
+    }
     const body = await res.text();
     const error = new Error(`Request failed: ${res.status} ${res.statusText}`);
     error.status = res.status;
     error.body = body;
+
+    if (attempt < retries && [429, 503, 504].includes(res.status)) {
+      const delay = Math.min(maxDelayMs, minDelayMs * (2 ** attempt));
+      attempt += 1;
+      await sleep(delay);
+      continue;
+    }
+
     throw error;
   }
-  return res.json();
 }
 
 async function ensureCollection() {
@@ -96,6 +117,7 @@ async function embedText(text) {
         model: LLM_EMBED_MODEL,
         input: text,
       }),
+      retry: { retries: 2, minDelayMs: 300, maxDelayMs: 2000 },
     });
     return data.data[0].embedding;
   }
@@ -162,6 +184,7 @@ async function askLLM(question, contextItems) {
           ],
           temperature: 0.2,
         }),
+        retry: { retries: 2, minDelayMs: 500, maxDelayMs: 2500 },
       });
       const durationMs = Date.now() - start;
       const usage = data.usage || {};
@@ -183,11 +206,11 @@ async function askLLM(question, contextItems) {
 
   const start = Date.now();
   const answer = contextItems.length
-    ? `প্রশ্ন: ${question}\nউত্তর: এই প্রশ্নের সাথে সবচেয়ে মিল থাকা টাস্কগুলো হলো: ${contextItems
+    ? `Question: ${question}\nAnswer: Closest matching tasks: ${contextItems
         .map((item) => item.payload?.title)
         .filter(Boolean)
         .join(', ')}`
-    : `প্রশ্ন: ${question}\nউত্তর: কোন মিল পাওয়া যায়নি।`;
+    : `Question: ${question}\nAnswer: No close matches found.`;
   const durationMs = Date.now() - start;
   recordUsage({ durationMs, tokensIn: question.length, tokensOut: answer.length });
   return { answer, usage: { prompt_tokens: question.length, completion_tokens: answer.length } };

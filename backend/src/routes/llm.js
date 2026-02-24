@@ -9,6 +9,7 @@ const {
 } = require('../services/llm');
 
 const router = express.Router();
+const rateLimitResponse = { error: 'LLM rate limit exceeded. Try again in a minute.' };
 
 router.get('/health', async (req, res, next) => {
   try {
@@ -53,6 +54,9 @@ router.post('/reindex', async (req, res, next) => {
 
     res.json({ indexed: points.length });
   } catch (err) {
+    if (err.status === 429) {
+      return res.status(429).json(rateLimitResponse);
+    }
     next(err);
   }
 });
@@ -73,6 +77,9 @@ router.post('/search', async (req, res, next) => {
       })),
     });
   } catch (err) {
+    if (err.status === 429) {
+      return res.status(429).json(rateLimitResponse);
+    }
     next(err);
   }
 });
@@ -96,6 +103,9 @@ router.post('/ask', async (req, res, next) => {
       })),
     });
   } catch (err) {
+    if (err.status === 429) {
+      return res.status(429).json(rateLimitResponse);
+    }
     next(err);
   }
 });
