@@ -23,7 +23,7 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
 }));
 
 // Request logging (skip health checks to reduce noise)
@@ -44,6 +44,30 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+const apiAuthKey = process.env.API_AUTH_KEY || '';
+
+const requireApiKey = (req, res, next) => {
+  if (!apiAuthKey) {
+    return next();
+  }
+  const headerKey = req.get('x-api-key');
+  const authorization = req.get('authorization') || '';
+  const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  const providedKey = headerKey || bearer;
+  if (!providedKey || providedKey !== apiAuthKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+};
+
+const llmLimiter = rateLimit({
+  windowMs: parseInt(process.env.LLM_RATE_LIMIT_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.LLM_RATE_LIMIT_MAX || '30', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'LLM rate limit exceeded. Try again in a minute.' },
+});
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -53,9 +77,9 @@ app.use('/', healthRoutes);
 
 // Application routes
 app.use('/api/tasks', taskRoutes);
-app.use('/api/llm', llmRoutes);
+app.use('/api/llm', requireApiKey, llmLimiter, llmRoutes);
 
-app.get('/metrics', (req, res) => {
+app.get('/metrics', requireApiKey, (req, res) => {
   res.setHeader('Content-Type', 'text/plain; version=0.0.4');
   res.send(getMetricsText());
 });

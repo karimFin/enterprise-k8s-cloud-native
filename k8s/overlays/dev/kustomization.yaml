@@ -31,7 +31,7 @@ patches:
               - name: ghcr-secret
             containers:
               - name: frontend
-                imagePullPolicy: IfNotPresent
+                imagePullPolicy: Always
   - patch: |-
       apiVersion: apps/v1
       kind: StatefulSet
@@ -67,9 +67,18 @@ patches:
         QDRANT_COLLECTION: tasks
         LLM_PROVIDER: mock
         LLM_MODEL: gpt-4o-mini
+        LLM_MODEL_FAST: gpt-4o-mini
+        LLM_MODEL_ACCURATE: gpt-4o
         LLM_EMBED_MODEL: text-embedding-3-small
         LLM_API_BASE: https://api.openai.com/v1
         LLM_VECTOR_SIZE: "8"
+        LLM_ROUTING: length
+        LLM_ROUTING_MAX_CHARS: "200"
+        LLM_RATE_LIMIT_WINDOW_MS: "60000"
+        LLM_RATE_LIMIT_MAX: "30"
+        LLM_COST_INPUT_PER_1K: "0.00015"
+        LLM_COST_OUTPUT_PER_1K: "0.0006"
+        LLM_EMBED_COST_PER_1K: "0.00002"
   - patch: |-
       $patch: delete
       apiVersion: networking.k8s.io/v1
