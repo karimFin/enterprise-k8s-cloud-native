@@ -58,12 +58,12 @@ services:
       - LLM_EMBED_MODEL=text-embedding-3-small
       - LLM_API_BASE=https://api.openai.com/v1
       - LLM_VECTOR_SIZE=8
-      - LLM_API_KEY=
+      - LLM_API_KEY=${LLM_API_KEY}
     depends_on:
       db:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
       interval: 10s
@@ -100,7 +100,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:6333/healthz"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   # ---------------------------------------------------------------------------
   # pgAdmin — optional DB UI, start with: docker compose --profile tools up
