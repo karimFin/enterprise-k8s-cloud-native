@@ -86,6 +86,12 @@ body {
   justify-content: space-between;
   gap: 12px;
 }
+.llm-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .llm-header h2 { font-size: 1rem; }
 .llm-row {
   display: flex;
@@ -110,6 +116,33 @@ body {
   padding: 8px 10px;
   font-size: 0.85rem;
 }
+.llm-usage {
+  display: grid;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.llm-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.llm-usage-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.llm-usage-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.llm-usage-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
 .llm-answer {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -117,6 +150,13 @@ body {
   padding: 10px 12px;
   font-size: 0.9rem;
   white-space: pre-wrap;
+}
+.llm-eval {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 0.85rem;
 }
 .llm-results {
   display: grid;
