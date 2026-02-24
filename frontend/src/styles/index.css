@@ -71,6 +71,67 @@ body {
 .stat-value { font-size: 1.8rem; font-weight: 700; }
 .stat-label { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
 
+.llm-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: grid;
+  gap: 12px;
+}
+.llm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.llm-header h2 { font-size: 1rem; }
+.llm-row {
+  display: flex;
+  gap: 10px;
+}
+.llm-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  color: var(--text);
+}
+.llm-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.llm-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+.llm-answer {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+.llm-results {
+  display: grid;
+  gap: 10px;
+}
+.llm-result {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.llm-title { font-size: 0.95rem; font-weight: 600; }
+.llm-desc { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+.llm-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+
 /* Toolbar */
 .toolbar {
   display: flex;

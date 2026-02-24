@@ -79,6 +79,13 @@ configMapGenerator:
       - NODE_ENV=production
       - LOG_LEVEL=warn
       - CORS_ORIGIN=https://myapp.example.com
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION=tasks
+      - LLM_PROVIDER=openai
+      - LLM_MODEL=gpt-4o-mini
+      - LLM_EMBED_MODEL=text-embedding-3-small
+      - LLM_API_BASE=https://api.openai.com/v1
+      - LLM_VECTOR_SIZE=1536
 
 images:
   - name: backend
