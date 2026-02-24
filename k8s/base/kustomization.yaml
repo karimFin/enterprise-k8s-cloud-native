@@ -15,5 +15,7 @@ resources:
   - frontend-hpa.yaml
   - postgres-statefulset.yaml
   - postgres-service.yaml
+  - qdrant-statefulset.yaml
+  - qdrant-service.yaml
   - ingress.yaml
   - network-policies.yaml

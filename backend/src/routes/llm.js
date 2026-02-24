@@ -1,0 +1,103 @@
+const express = require('express');
+const { query } = require('../db/connection');
+const {
+  embedText,
+  upsertPoints,
+  searchPoints,
+  askLLM,
+  ensureCollection,
+} = require('../services/llm');
+
+const router = express.Router();
+
+router.get('/health', async (req, res, next) => {
+  try {
+    await ensureCollection();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    err.statusCode = 503;
+    next(err);
+  }
+});
+
+router.post('/reindex', async (req, res, next) => {
+  try {
+    const limit = parseInt(req.body?.limit || '0', 10);
+    const result = await query(
+      `SELECT id, title, description, status, priority, assigned_to
+       FROM tasks
+       ORDER BY created_at DESC
+       ${limit > 0 ? `LIMIT ${limit}` : ''}`
+    );
+
+    const points = [];
+    for (const task of result.rows) {
+      const content = `${task.title}\n${task.description || ''}`.trim();
+      const vector = await embedText(content);
+      points.push({
+        id: task.id,
+        vector,
+        payload: {
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          assigned_to: task.assigned_to,
+        },
+      });
+    }
+
+    if (points.length > 0) {
+      await upsertPoints(points);
+    }
+
+    res.json({ indexed: points.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/search', async (req, res, next) => {
+  try {
+    const { query: queryText, limit = 5 } = req.body || {};
+    if (!queryText || typeof queryText !== 'string') {
+      return res.status(400).json({ error: 'query is required' });
+    }
+    const vector = await embedText(queryText);
+    const matches = await searchPoints(vector, parseInt(limit, 10));
+    res.json({
+      matches: matches.map((match) => ({
+        id: match.id,
+        score: match.score,
+        payload: match.payload,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/ask', async (req, res, next) => {
+  try {
+    const { question, limit = 5 } = req.body || {};
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'question is required' });
+    }
+    const vector = await embedText(question);
+    const matches = await searchPoints(vector, parseInt(limit, 10));
+    const response = await askLLM(question, matches);
+    res.json({
+      answer: response.answer,
+      usage: response.usage,
+      sources: matches.map((match) => ({
+        id: match.id,
+        score: match.score,
+        payload: match.payload,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 
 const healthRoutes = require('./routes/health');
 const taskRoutes = require('./routes/tasks');
+const llmRoutes = require('./routes/llm');
+const { getMetricsText } = require('./services/llm');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
@@ -51,6 +53,12 @@ app.use('/', healthRoutes);
 
 // Application routes
 app.use('/api/tasks', taskRoutes);
+app.use('/api/llm', llmRoutes);
+
+app.get('/metrics', (req, res) => {
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+  res.send(getMetricsText());
+});
 
 // Root
 app.get('/', (req, res) => {
