@@ -86,6 +86,11 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: LLM_API_KEY
+            - name: API_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: API_AUTH_KEY
 
           # Container Security Context
           securityContext:

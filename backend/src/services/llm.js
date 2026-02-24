@@ -4,9 +4,16 @@ const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION || 'tasks';
 const LLM_PROVIDER = (process.env.LLM_PROVIDER || 'mock').toLowerCase();
 const LLM_MODEL = process.env.LLM_MODEL || 'gpt-4o-mini';
+const LLM_MODEL_FAST = process.env.LLM_MODEL_FAST || '';
+const LLM_MODEL_ACCURATE = process.env.LLM_MODEL_ACCURATE || '';
 const LLM_EMBED_MODEL = process.env.LLM_EMBED_MODEL || 'text-embedding-3-small';
 const LLM_API_BASE = process.env.LLM_API_BASE || 'https://api.openai.com/v1';
 const LLM_VECTOR_SIZE = parseInt(process.env.LLM_VECTOR_SIZE || '8', 10);
+const LLM_ROUTING = (process.env.LLM_ROUTING || '').toLowerCase();
+const LLM_ROUTING_MAX_CHARS = parseInt(process.env.LLM_ROUTING_MAX_CHARS || '200', 10);
+const LLM_COST_INPUT_PER_1K = parseFloat(process.env.LLM_COST_INPUT_PER_1K || '0');
+const LLM_COST_OUTPUT_PER_1K = parseFloat(process.env.LLM_COST_OUTPUT_PER_1K || '0');
+const LLM_EMBED_COST_PER_1K = parseFloat(process.env.LLM_EMBED_COST_PER_1K || '0');
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
 
 const metrics = {
@@ -16,15 +23,31 @@ const metrics = {
   llmDurationMsCount: 0,
   llmTokensInTotal: 0,
   llmTokensOutTotal: 0,
+  llmCostUsdTotal: 0,
+  llmEmbedCostUsdTotal: 0,
+  llmModelCounts: {},
 };
 
-function recordUsage({ durationMs, tokensIn = 0, tokensOut = 0, error = false }) {
+function recordUsage({
+  durationMs,
+  tokensIn = 0,
+  tokensOut = 0,
+  error = false,
+  model,
+  costUsd = 0,
+  embedCostUsd = 0,
+}) {
   metrics.llmRequestsTotal += 1;
   metrics.llmDurationMsSum += durationMs;
   metrics.llmDurationMsCount += 1;
   metrics.llmTokensInTotal += tokensIn;
   metrics.llmTokensOutTotal += tokensOut;
+  metrics.llmCostUsdTotal += costUsd;
+  metrics.llmEmbedCostUsdTotal += embedCostUsd;
   if (error) metrics.llmRequestErrorsTotal += 1;
+  if (model) {
+    metrics.llmModelCounts[model] = (metrics.llmModelCounts[model] || 0) + 1;
+  }
 }
 
 function getMetricsText() {
@@ -35,8 +58,39 @@ function getMetricsText() {
     `llm_request_duration_ms_count ${metrics.llmDurationMsCount}`,
     `llm_tokens_in_total ${metrics.llmTokensInTotal}`,
     `llm_tokens_out_total ${metrics.llmTokensOutTotal}`,
+    `llm_cost_usd_total ${metrics.llmCostUsdTotal.toFixed(6)}`,
+    `llm_embed_cost_usd_total ${metrics.llmEmbedCostUsdTotal.toFixed(6)}`,
     '',
   ].join('\n');
+}
+
+function getUsageSnapshot() {
+  const avgDurationMs =
+    metrics.llmDurationMsCount > 0
+      ? metrics.llmDurationMsSum / metrics.llmDurationMsCount
+      : 0;
+  return {
+    requestsTotal: metrics.llmRequestsTotal,
+    requestErrorsTotal: metrics.llmRequestErrorsTotal,
+    avgDurationMs,
+    tokensInTotal: metrics.llmTokensInTotal,
+    tokensOutTotal: metrics.llmTokensOutTotal,
+    costUsdTotal: Number(metrics.llmCostUsdTotal.toFixed(6)),
+    embedCostUsdTotal: Number(metrics.llmEmbedCostUsdTotal.toFixed(6)),
+    models: metrics.llmModelCounts,
+    routing: {
+      mode: LLM_ROUTING || 'off',
+      fastModel: LLM_MODEL_FAST || null,
+      accurateModel: LLM_MODEL_ACCURATE || null,
+      thresholdChars: LLM_ROUTING_MAX_CHARS,
+      defaultModel: LLM_MODEL,
+    },
+    pricing: {
+      inputPer1k: LLM_COST_INPUT_PER_1K,
+      outputPer1k: LLM_COST_OUTPUT_PER_1K,
+      embedPer1k: LLM_EMBED_COST_PER_1K,
+    },
+  };
 }
 
 function mockEmbedding(text) {
@@ -47,6 +101,17 @@ function mockEmbedding(text) {
     vector.push((byte / 255) * 2 - 1);
   }
   return vector;
+}
+
+function estimateTokens(text = '') {
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function resolveModel(question) {
+  if (LLM_ROUTING === 'length' && LLM_MODEL_FAST && LLM_MODEL_ACCURATE) {
+    return question.length > LLM_ROUTING_MAX_CHARS ? LLM_MODEL_ACCURATE : LLM_MODEL_FAST;
+  }
+  return LLM_MODEL;
 }
 
 async function fetchJson(url, options = {}) {
@@ -103,6 +168,7 @@ async function ensureCollection() {
 }
 
 async function embedText(text) {
+  const start = Date.now();
   if (LLM_PROVIDER === 'openai') {
     if (!LLM_API_KEY) {
       throw new Error('LLM_API_KEY is missing');
@@ -119,9 +185,27 @@ async function embedText(text) {
       }),
       retry: { retries: 2, minDelayMs: 300, maxDelayMs: 2000 },
     });
+    const durationMs = Date.now() - start;
+    const tokensIn = data.usage?.total_tokens || estimateTokens(text);
+    const embedCostUsd = (tokensIn / 1000) * LLM_EMBED_COST_PER_1K;
+    recordUsage({
+      durationMs,
+      tokensIn,
+      tokensOut: 0,
+      model: LLM_EMBED_MODEL,
+      embedCostUsd,
+    });
     return data.data[0].embedding;
   }
-  return mockEmbedding(text);
+  const vector = mockEmbedding(text);
+  const durationMs = Date.now() - start;
+  recordUsage({
+    durationMs,
+    tokensIn: estimateTokens(text),
+    tokensOut: 0,
+    model: 'mock-embed',
+  });
+  return vector;
 }
 
 async function upsertPoints(points) {
@@ -162,6 +246,7 @@ async function askLLM(question, contextItems) {
     if (!LLM_API_KEY) {
       throw new Error('LLM_API_KEY is missing');
     }
+    const model = resolveModel(question);
     const start = Date.now();
     try {
       const data = await fetchJson(`${LLM_API_BASE}/chat/completions`, {
@@ -171,7 +256,7 @@ async function askLLM(question, contextItems) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: LLM_MODEL,
+          model,
           messages: [
             {
               role: 'system',
@@ -188,18 +273,29 @@ async function askLLM(question, contextItems) {
       });
       const durationMs = Date.now() - start;
       const usage = data.usage || {};
+      const tokensIn = usage.prompt_tokens || estimateTokens(`${question}\n${context}`);
+      const tokensOut = usage.completion_tokens || estimateTokens(data.choices?.[0]?.message?.content || '');
+      const costUsd =
+        (tokensIn / 1000) * LLM_COST_INPUT_PER_1K +
+        (tokensOut / 1000) * LLM_COST_OUTPUT_PER_1K;
       recordUsage({
         durationMs,
-        tokensIn: usage.prompt_tokens || 0,
-        tokensOut: usage.completion_tokens || 0,
+        tokensIn,
+        tokensOut,
+        model,
+        costUsd,
       });
       return {
         answer: data.choices?.[0]?.message?.content || '',
-        usage,
+        usage: {
+          ...usage,
+          model,
+          cost_usd: Number(costUsd.toFixed(6)),
+        },
       };
     } catch (err) {
       const durationMs = Date.now() - start;
-      recordUsage({ durationMs, error: true });
+      recordUsage({ durationMs, error: true, model });
       throw err;
     }
   }
@@ -212,8 +308,23 @@ async function askLLM(question, contextItems) {
         .join(', ')}`
     : `Question: ${question}\nAnswer: No close matches found.`;
   const durationMs = Date.now() - start;
-  recordUsage({ durationMs, tokensIn: question.length, tokensOut: answer.length });
-  return { answer, usage: { prompt_tokens: question.length, completion_tokens: answer.length } };
+  const tokensIn = estimateTokens(question);
+  const tokensOut = estimateTokens(answer);
+  recordUsage({
+    durationMs,
+    tokensIn,
+    tokensOut,
+    model: 'mock-chat',
+  });
+  return {
+    answer,
+    usage: {
+      prompt_tokens: tokensIn,
+      completion_tokens: tokensOut,
+      model: 'mock-chat',
+      cost_usd: 0,
+    },
+  };
 }
 
 module.exports = {
@@ -223,4 +334,5 @@ module.exports = {
   askLLM,
   ensureCollection,
   getMetricsText,
+  getUsageSnapshot,
 };
