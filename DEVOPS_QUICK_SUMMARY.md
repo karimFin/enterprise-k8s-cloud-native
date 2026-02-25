@@ -102,7 +102,7 @@ You push code to main branch
 
 ### Step 1: You Code Locally
 ```
-you: Edit frontend/src/App.jsx
+you: Edit services/frontend/src/App.jsx
     └─ Add new feature
 ```
 
@@ -115,7 +115,7 @@ visit http://localhost:3000
 
 ### Step 3: Commit & Push
 ```
-git add frontend/
+git add services/frontend/
 git commit -m "Add awesome feature"
 git push origin main
 ```

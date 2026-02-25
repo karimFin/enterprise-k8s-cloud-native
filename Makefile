@@ -5,7 +5,7 @@
 
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 TF ?= $(ROOT_DIR)/.tools/terraform-1.10.5/terraform
-TF_DIR ?= $(ROOT_DIR)/terraform/oci-prod
+TF_DIR ?= $(ROOT_DIR)/platform/terraform/oci-prod
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -37,28 +37,28 @@ build: ## Build Docker images
 	docker compose build
 
 build-backend: ## Build backend image only
-	docker build -t myapp-backend:latest ./backend
+	docker build -t myapp-backend:latest ./services/backend
 
 build-frontend: ## Build frontend image only
-	docker build -t myapp-frontend:latest ./frontend
+	docker build -t myapp-frontend:latest ./services/frontend
 
 # ─── Test ─────────────────────────────────────────────────────
 test: ## Run all tests
-	cd backend && npm test
-	cd frontend && npm test
+	cd services/backend && npm test
+	cd services/frontend && npm test
 
 test-backend: ## Run backend tests
-	cd backend && npm test
+	cd services/backend && npm test
 
 test-frontend: ## Run frontend tests
-	cd frontend && npm test
+	cd services/frontend && npm test
 
 # ─── Kubernetes ───────────────────────────────────────────────
 deploy-dev: ## Deploy to dev namespace
-	kubectl apply -k k8s/overlays/dev
+	kubectl apply -k platform/k8s/overlays/dev
 
 deploy-prod: ## Deploy to production namespace
-	kubectl apply -k k8s/overlays/prod
+	kubectl apply -k platform/k8s/overlays/prod
 
 k8s-status: ## Show all resources in all namespaces
 	@echo "=== Dev ===" && kubectl get all -n myapp-dev 2>/dev/null || true
@@ -66,12 +66,12 @@ k8s-status: ## Show all resources in all namespaces
 
 # ─── Cluster Setup ────────────────────────────────────────────
 bootstrap: ## Bootstrap a new cluster
-	chmod +x scripts/bootstrap-cluster.sh
-	./scripts/bootstrap-cluster.sh
+	chmod +x platform/scripts/bootstrap-cluster.sh
+	./platform/scripts/bootstrap-cluster.sh
 
 create-dev-ns: ## Create dev namespace (usage: make create-dev-ns NAME=alice EMAIL=alice@co.com)
-	chmod +x scripts/create-dev-namespace.sh
-	./scripts/create-dev-namespace.sh $(NAME) $(EMAIL)
+	chmod +x platform/scripts/create-dev-namespace.sh
+	./platform/scripts/create-dev-namespace.sh $(NAME) $(EMAIL)
 
 # ─── Kind (Local K8s) ────────────────────────────────────────
 kind-create: ## Create a local kind cluster
@@ -87,8 +87,8 @@ kind-delete: ## Delete kind cluster
 # ─── Cleanup ──────────────────────────────────────────────────
 clean: ## Remove build artifacts and containers
 	docker compose down -v --rmi local
-	rm -rf frontend/dist frontend/node_modules
-	rm -rf backend/node_modules backend/coverage
+	rm -rf services/frontend/dist services/frontend/node_modules
+	rm -rf services/backend/node_modules services/backend/coverage
 
 # ─── Local GitHub Actions (act) ───────────────────────────────
 act-test: ## Run GitHub Actions test job locally
@@ -150,5 +150,5 @@ sleep-cloud:
 
 wake-cloud:
 	cd $(TF_DIR) && $(TF) apply -auto-approve -var node_pool_size=1
-	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/k8s/overlays/dev
-	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/k8s/overlays/prod
+	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/platform/k8s/overlays/dev
+	kubectl --kubeconfig /Users/mdmirajulkarim/Documents/k8s/myappl/.kubeconfig-oke-prod --context context-c4asgp5m2pq apply -k /Users/mdmirajulkarim/Documents/k8s/myappl/platform/k8s/overlays/prod

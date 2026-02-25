@@ -6,23 +6,45 @@
 services:
   frontend:
     build:
-      context: ./frontend
+      context: ./services/frontend
       target: builder
     command: npm run dev -- --host 0.0.0.0
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
+      - ./services/frontend/src:/app/src
+      - ./services/frontend/index.html:/app/index.html
     environment:
       VITE_API_URL: "http://localhost:8080"
+      VITE_AUTH_URL: "http://localhost:8081"
+      VITE_NOTIFICATIONS_URL: "http://localhost:8082"
 
   backend:
     build:
-      context: ./backend
+      context: ./services/backend
       target: dev
     command: npx nodemon src/server.js
     volumes:
-      - ./backend/src:/app/src
+      - ./services/backend/src:/app/src
+    environment:
+      NODE_ENV: development
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      target: dev
+    command: npx nodemon src/server.js
+    volumes:
+      - ./services/auth-service/src:/app/src
+    environment:
+      NODE_ENV: development
+
+  notifications-service:
+    build:
+      context: ./services/notifications-service
+      target: dev
+    command: npx nodemon src/server.js
+    volumes:
+      - ./services/notifications-service/src:/app/src
     environment:
       NODE_ENV: development

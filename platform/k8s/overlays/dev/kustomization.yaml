@@ -1,0 +1,103 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: myapp-dev
+resources:
+  - ../../base
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: backend
+      spec:
+        replicas: 1
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+            containers:
+              - name: backend
+                imagePullPolicy: IfNotPresent
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: frontend
+      spec:
+        replicas: 1
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+            containers:
+              - name: frontend
+                imagePullPolicy: Always
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: auth-service
+      spec:
+        replicas: 1
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+            containers:
+              - name: auth-service
+                imagePullPolicy: IfNotPresent
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notifications-service
+      spec:
+        replicas: 1
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+            containers:
+              - name: notifications-service
+                imagePullPolicy: IfNotPresent
+  - patch: |-
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: postgres
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-secret
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: backend-hpa
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: frontend-hpa
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: auth-service-hpa
+images:
+  - name: backend
+    newName: ghcr.io/karimfin/myapp-backend
+    newTag: latest
+  - name: frontend
+    newName: ghcr.io/karimfin/myapp-frontend
+    newTag: latest
+  - name: auth-service
+    newName: ghcr.io/karimfin/myapp-auth-service
+    newTag: latest
+  - name: notifications-service
+    newName: ghcr.io/karimfin/myapp-notifications-service
+    newTag: latest

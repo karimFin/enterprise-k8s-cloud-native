@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      terminationGracePeriodSeconds: 15
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [frontend]
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: frontend
+          image: frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi  # Increased from 128Mi - nginx needs more memory
+          # Startup probe — give nginx time to start before readiness/liveness checks
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 40  # Increased: 40 × 2s = 80 seconds max wait
+            periodSeconds: 2
+            initialDelaySeconds: 2  # Give nginx 2 seconds before first check
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+            timeoutSeconds: 3
+            initialDelaySeconds: 0
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 3"]
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: pid
+              mountPath: /var/run
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: pid
+          emptyDir: {}

@@ -98,7 +98,7 @@ Frontend      Backend
 ### Frontend
 
 ```
-frontend/
+services/frontend/
 ├── Dockerfile              # Multi-stage build
 ├── nginx.conf             # Nginx configuration
 ├── package.json           # Dependencies: React, Vite
@@ -130,7 +130,7 @@ frontend/
 ### Backend
 
 ```
-backend/
+services/backend/
 ├── Dockerfile                # Multi-stage build
 ├── package.json             # Dependencies: Express, pg
 ├── src/
@@ -171,7 +171,7 @@ backend/
 ### Kubernetes Configuration
 
 ```
-k8s/
+platform/k8s/
 ├── base/
 │   ├── kustomization.yaml          # Base kustomization file
 │   ├── namespace.yaml              # myapp namespace definition
@@ -179,16 +179,20 @@ k8s/
 │   ├── backend-service.yaml       # Backend service
 │   ├── backend-hpa.yaml           # Backend auto-scaling
 │   ├── backend-pdb.yaml           # Pod disruption budget
+│   ├── auth-deployment.yaml       # Auth service deployment spec
+│   ├── auth-service.yaml          # Auth service
+│   ├── auth-hpa.yaml              # Auth service auto-scaling
+│   ├── auth-pdb.yaml              # Auth service disruption budget
 │   ├── frontend-deployment.yaml   # Frontend deployment spec
 │   ├── frontend-service.yaml      # Frontend service
 │   ├── frontend-hpa.yaml          # Frontend auto-scaling
+│   ├── notifications-deployment.yaml # Notifications deployment spec
+│   ├── notifications-service.yaml # Notifications service
 │   ├── postgres-statefulset.yaml  # Database statefulset
 │   ├── postgres-service.yaml      # Database service
-│   ├── configmap.yaml             # Environment configs
-│   ├── secrets.yaml               # Encrypted secrets
-│   ├── service-accounts.yaml      # RBAC service accounts
-│   ├── ingress.yaml               # External access routing
-│   └── network-policies.yaml      # Pod communication rules
+│   ├── qdrant-statefulset.yaml    # Vector database statefulset
+│   ├── qdrant-service.yaml        # Vector database service
+│   └── secrets.yaml               # Encrypted secrets
 │
 └── overlays/
     ├── dev/
@@ -233,7 +237,12 @@ resources:
   - frontend-deployment.yaml
   - frontend-service.yaml
   - postgres-statefulset.yaml
-  - ingress.yaml
+  - auth-deployment.yaml
+  - auth-service.yaml
+  - notifications-deployment.yaml
+  - notifications-service.yaml
+  - qdrant-statefulset.yaml
+  - qdrant-service.yaml
   # ... etc
 
 # This lists all K8s resources to deploy
@@ -269,16 +278,16 @@ patchesStrategicMerge:
 ```yaml
 services:
   frontend:
-    build: ./frontend
+    build: ./services/frontend
     ports:
       - "3000:3000"
     environment:
       - VITE_API_URL=http://localhost:8080
     volumes:
-      - ./frontend/src:/app/src  # Live reload
+      - ./services/frontend/src:/app/src  # Live reload
 
   backend:
-    build: ./backend
+    build: ./services/backend
     ports:
       - "8080:8080"
     environment:
@@ -404,7 +413,7 @@ Checks out code
 ↓
 Installs Node.js
 ↓
-npm test (runs tests in backend/ and frontend/)
+npm test (runs tests in services/backend/ and services/frontend/)
 ↓
 If tests pass → proceed to build
 If tests fail → stop, notify developer
@@ -428,7 +437,7 @@ For each service (frontend, backend):
 
 ### Step 5: Validate Kubernetes
 ```
-kustomize build k8s/overlays/dev
+kustomize build platform/k8s/overlays/dev
   ↓
 Merges base/ + overlays/dev/
   ↓
@@ -442,7 +451,7 @@ If valid → proceed to deploy
 
 ### Step 6: Deploy to Dev
 ```
-kubectl apply -k k8s/overlays/dev
+kubectl apply -k platform/k8s/overlays/dev
   ↓
 Kustomize merges base + dev overrides
   ↓
@@ -470,7 +479,7 @@ kubectl config set (connect to production cluster)
   ↓
 kustomize edit set image (update image tag)
   ↓
-kubectl apply -k k8s/overlays/prod
+kubectl apply -k platform/k8s/overlays/prod
   ↓
 Rolling update starts:
   Create new pod with new image
@@ -525,7 +534,7 @@ DB_NAME=myapp                         # Database name
 
 ### Secrets (Kubernetes)
 ```
-Located in: k8s/base/secrets.yaml
+Located in: platform/k8s/base/secrets.yaml
 Stored as: Base64 encoded (at rest)
 Referenced in: Deployments as environment variables
 
@@ -537,17 +546,6 @@ ghcr-secret:
   username: github_username
   password: github_token
   server: ghcr.io
-```
-
-### ConfigMap (Non-sensitive config)
-```
-Located in: k8s/base/configmap.yaml
-Referenced in: Deployments as environment variables
-
-ENVIRONMENT: production
-LOG_LEVEL: info
-DATABASE_HOST: postgres.myapp-production.svc.cluster.local
-FRONTEND_URL: https://myapp.example.com
 ```
 
 ---

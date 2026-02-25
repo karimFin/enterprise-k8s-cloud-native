@@ -5,7 +5,7 @@
 ### Build & Run Locally
 ```bash
 # Build image
-docker build -t myapp-backend:v1.0 ./backend
+docker build -t myapp-backend:v1.0 ./services/backend
 
 # Run container
 docker run -p 8080:8080 myapp-backend:v1.0
@@ -262,10 +262,10 @@ kubectl edit hpa HPANAME
 kubectl apply -f deployment.yaml
 
 # Apply all in directory
-kubectl apply -f k8s/
+kubectl apply -f platform/k8s/
 
 # Apply Kustomize
-kubectl apply -k k8s/overlays/prod/
+kubectl apply -k platform/k8s/overlays/prod/
 
 # Dry run (test without applying)
 kubectl apply -f deployment.yaml --dry-run=client
@@ -362,29 +362,29 @@ kubectl describe pod POD_NAME | grep -A 10 "Events:"
 ### Build & Deploy
 ```bash
 # Build overlay (see final YAML)
-kustomize build k8s/overlays/prod
+kustomize build platform/k8s/overlays/prod
 
 # Apply overlay
-kubectl apply -k k8s/overlays/prod
+kubectl apply -k platform/k8s/overlays/prod
 
 # Dry run
-kubectl apply -k k8s/overlays/prod --dry-run=client
+kubectl apply -k platform/k8s/overlays/prod --dry-run=client
 
 # Edit deployment image in overlay
-cd k8s/overlays/prod
+cd platform/k8s/overlays/prod
 kustomize edit set image backend=ghcr.io/myuser/myapp-backend:v2.0
-cd - && kubectl apply -k k8s/overlays/prod
+cd - && kubectl apply -k platform/k8s/overlays/prod
 ```
 
 ### View Kustomization
 ```bash
 # View final manifest
-kustomize build k8s/overlays/prod > final.yaml
+kustomize build platform/k8s/overlays/prod > final.yaml
 cat final.yaml
 
 # Compare overlays
-kustomize build k8s/overlays/dev > dev.yaml
-kustomize build k8s/overlays/prod > prod.yaml
+kustomize build platform/k8s/overlays/dev > dev.yaml
+kustomize build platform/k8s/overlays/prod > prod.yaml
 diff dev.yaml prod.yaml
 ```
 
@@ -398,7 +398,7 @@ diff dev.yaml prod.yaml
 git status
 
 # Add files
-git add frontend/
+git add services/frontend/
 
 # Commit
 git commit -m "Add new feature"
@@ -598,7 +598,7 @@ kubectl set image deployment/backend backend=ghcr.io/myuser/myapp-backend:v2.0 -
 kubectl patch deployment backend -p '{"spec":{"template":{"spec":{"containers":[{"name":"backend","image":"ghcr.io/myuser/myapp-backend:v2.0"}]}}}}'
 
 # Using kustomize (recommended)
-cd k8s/overlays/prod
+cd platform/k8s/overlays/prod
 kustomize edit set image backend=ghcr.io/myuser/myapp-backend:v2.0
 kubectl apply -k .
 ```
@@ -682,7 +682,7 @@ klogs deployment/backend
 
 | Task | Command |
 |------|---------|
-| Deploy | `kubectl apply -k k8s/overlays/prod` |
+| Deploy | `kubectl apply -k platform/k8s/overlays/prod` |
 | Scale | `kubectl scale deployment backend --replicas=5` |
 | Logs | `kubectl logs -f deployment/backend` |
 | Exec | `kubectl exec -it deployment/backend -- /bin/sh` |

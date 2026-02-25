@@ -49,27 +49,28 @@ A **full-stack task management application** with:
 
 ```
 myappl/
-├── frontend/              ← React application
-│   ├── src/
-│   ├── Dockerfile         ← Instructions to build frontend image
-│   └── package.json       ← JavaScript dependencies
+├── services/
+│   ├── frontend/          ← React application
+│   │   ├── src/
+│   │   ├── Dockerfile     ← Instructions to build frontend image
+│   │   └── package.json   ← JavaScript dependencies
+│   └── backend/           ← Node.js API server
+│       ├── src/
+│       ├── Dockerfile     ← Instructions to build backend image
+│       ├── __tests__/     ← Automated tests
+│       └── package.json   ← JavaScript dependencies
 │
-├── backend/               ← Node.js API server
-│   ├── src/
-│   ├── Dockerfile         ← Instructions to build backend image
-│   ├── __tests__/         ← Automated tests
-│   └── package.json       ← JavaScript dependencies
-│
-├── k8s/                   ← Kubernetes configuration
-│   ├── base/              ← Base manifests (common to all environments)
-│   │   ├── backend-deployment.yaml
-│   │   ├── frontend-deployment.yaml
-│   │   ├── postgres-statefulset.yaml
-│   │   ├── ingress.yaml
-│   │   └── kustomization.yaml
-│   └── overlays/          ← Environment-specific overrides
-│       ├── dev/
-│       └── prod/
+├── platform/
+│   ├── k8s/               ← Kubernetes configuration
+│   │   ├── base/          ← Base manifests (common to all environments)
+│   │   │   ├── backend-deployment.yaml
+│   │   │   ├── frontend-deployment.yaml
+│   │   │   ├── postgres-statefulset.yaml
+│   │   │   └── kustomization.yaml
+│   │   └── overlays/      ← Environment-specific overrides
+│   │       ├── dev/
+│   │       └── prod/
+│   └── terraform/         ← Infrastructure as code (OCI)
 │
 ├── .github/
 │   └── workflows/
@@ -87,29 +88,25 @@ myappl/
 ```
 Internet User
      ↓
-[Ingress (nginx)] ← Entry point, TLS/HTTPS
+Frontend Service ← Entry point (LoadBalancer in prod)
      ↓
-  ┌─────┴──────┐
-  ↓            ↓
-Frontend    Backend
-(React)     (Node.js)
-  ↓            ↓
-  └─────┬──────┘
-        ↓
-    PostgreSQL
-    (Database)
+Frontend Pods (React + Nginx)
+     ↓
+Backend Service
+     ↓
+Backend Pods (Node.js API)
+     ↓
+PostgreSQL
+(Database)
 ```
 
 ### What Each Layer Does
 
-#### 1. **Ingress Controller (nginx)**
-- Acts like a "receptionist" for your application
-- Receives all incoming HTTP requests from the internet
-- Routes traffic based on URL paths:
-  - `/api/*` → Backend API
-  - `/` → Frontend (React app)
-- Handles HTTPS/TLS encryption
-- Provides rate limiting and security
+#### 1. **Frontend Service (Entry Point)**
+- Exposes the frontend to users
+- Acts as the stable entry endpoint for the UI
+- In production this is a LoadBalancer service
+- Routes traffic to frontend pods
 
 #### 2. **Frontend (React + Nginx)**
 - **React**: JavaScript framework that creates interactive user interfaces
@@ -118,7 +115,7 @@ Frontend    Backend
 - **Replicas**: Usually 2-3 copies running simultaneously (for high availability)
 - **Why multiple copies?** If one crashes, users still get served by another
 
-#### 3. **Backend (Node.js + Express)**
+#### 3. **Backend (Service + Node.js + Express)**
 - **Express**: Web framework for handling HTTP requests
 - **Handles**: API calls, business logic, database queries
 - **Stateless**: Can run multiple copies without them knowing about each other
@@ -304,7 +301,7 @@ Copy-pasting YAML files for each environment = maintenance nightmare 😱
 
 #### File Structure
 ```
-k8s/
+platform/k8s/
 ├── base/
 │   ├── backend-deployment.yaml      # Generic deployment
 │   ├── backend-hpa.yaml             # Auto-scaling rules
@@ -319,7 +316,7 @@ k8s/
 
 #### Example: Production Patch
 ```yaml
-# k8s/overlays/prod/kustomization.yaml
+# platform/k8s/overlays/prod/kustomization.yaml
 patches:
   - patch: |-
       apiVersion: apps/v1
@@ -397,27 +394,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-      - run: npm ci && npm test
+      - run: cd services/backend && npm ci && npm test
 
   build-and-push:           # Job 2: Build Docker images
     needs: test             # Only run if test passes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t myapp-backend:${{ github.sha }} ./backend
+      - run: docker build -t myapp-backend:${{ github.sha }} ./services/backend
       - run: docker push ghcr.io/myapp-backend:${{ github.sha }}
 
   deploy-dev:               # Job 3: Deploy to dev
     needs: [build-and-push]
     runs-on: ubuntu-latest
     steps:
-      - run: kubectl apply -k k8s/overlays/dev
+      - run: kubectl apply -k platform/k8s/overlays/dev
 
   deploy-prod:              # Job 4: Deploy to production
     needs: deploy-dev
     runs-on: ubuntu-latest
     steps:
-      - run: kubectl apply -k k8s/overlays/prod
+      - run: kubectl apply -k platform/k8s/overlays/prod
 ```
 
 ### Deployment Strategy
@@ -513,16 +510,16 @@ docker-compose up --build    # Build and run all services locally
 ```yaml
 services:
   frontend:
-    build: ./frontend
+    build: ./services/frontend
     ports:
       - "3000:3000"
     environment:
       - VITE_API_URL=http://localhost:8080
     volumes:
-      - ./frontend/src:/app/src    # Live code reload
+      - ./services/frontend/src:/app/src    # Live code reload
 
   backend:
-    build: ./backend
+    build: ./services/backend
     ports:
       - "8080:8080"
     environment:
@@ -569,14 +566,14 @@ aws eks create-cluster \
 aws eks update-kubeconfig --name myapp-prod
 
 # Deploy
-kubectl apply -k k8s/overlays/prod
+kubectl apply -k platform/k8s/overlays/prod
 ```
 
 #### Google GKE
 ```bash
 gcloud container clusters create myapp-prod
 gcloud container clusters get-credentials myapp-prod
-kubectl apply -k k8s/overlays/prod
+kubectl apply -k platform/k8s/overlays/prod
 ```
 
 #### Our Dev (Kind)
@@ -610,7 +607,7 @@ kubectl top pods -n myapp-production
 kubectl top nodes
 
 # Apply configuration
-kubectl apply -f k8s/overlays/prod/
+kubectl apply -f platform/k8s/overlays/prod/
 
 # Rollback
 kubectl rollout undo deployment/backend -n myapp-production
@@ -655,10 +652,10 @@ docker-compose up --build
 
 ```bash
 # Edit frontend
-vim frontend/src/App.jsx
+vim services/frontend/src/App.jsx
 
 # Commit
-git add frontend/
+git add services/frontend/
 git commit -m "Update frontend UI"
 git push origin main    # Must push to MAIN branch
 ```
@@ -1075,18 +1072,18 @@ docker-compose up --build
 docker-compose logs -f backend
 
 # Testing
-npm test
-npm run test:watch
+cd services/backend && npm test
+cd services/frontend && npm run test:watch
 
 # Building
-docker build -t myapp-backend:latest ./backend
+docker build -t myapp-backend:latest ./services/backend
 
 # Kubernetes - Common Tasks
 kubectl get pods -n myapp-production
 kubectl describe pod POD_NAME -n myapp-production
 kubectl logs deployment/backend -n myapp-production -f
 kubectl exec -it deployment/backend -n myapp-production -- /bin/sh
-kubectl apply -k k8s/overlays/prod/
+kubectl apply -k platform/k8s/overlays/prod/
 kubectl rollout status deployment/backend -n myapp-production
 kubectl rollout undo deployment/backend -n myapp-production
 kubectl port-forward svc/frontend 3000:80 -n myapp-production

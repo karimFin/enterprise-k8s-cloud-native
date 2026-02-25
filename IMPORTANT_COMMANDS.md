@@ -11,21 +11,21 @@ docker compose logs -f
 ## Tests
 
 ```bash
-cd backend && npm test
-cd ../frontend && npm test
+cd services/backend && npm test
+cd services/frontend && npm test
 ```
 
 ## Build Images
 
 ```bash
-docker build -t myapp-backend:latest ./backend
-docker build -t myapp-frontend:latest ./frontend
+docker build -t myapp-backend:latest ./services/backend
+docker build -t myapp-frontend:latest ./services/frontend
 ```
 
 ## Kubernetes (Dev)
 
 ```bash
-kubectl apply -k k8s/overlays/dev
+kubectl apply -k platform/k8s/overlays/dev
 kubectl rollout status deployment/backend -n myapp-dev --timeout=300s
 kubectl rollout status deployment/frontend -n myapp-dev --timeout=300s
 kubectl exec -n myapp-dev deploy/backend -- wget -qO- http://127.0.0.1:8080/health
@@ -55,7 +55,7 @@ git push origin main
 ## Terraform
 
 ```bash
-cd terraform
+cd platform/terraform
 terraform init
 terraform plan
 terraform apply

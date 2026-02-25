@@ -23,7 +23,7 @@ Terraform creates the infrastructure in the cloud, and Kubernetes runs the appli
 Terraform change (enables monitoring add-on):
 
 ```hcl
-# terraform/oci-prod/terraform.tfvars
+# platform/terraform/oci-prod/terraform.tfvars
 enable_monitoring = true
 ```
 
@@ -40,7 +40,7 @@ Kubernetes then schedules the monitoring pods in the `monitoring` namespace.
 Kubernetes overlay change (dev environment only):
 
 ```yaml
-# k8s/overlays/dev/kustomization.yaml
+# platform/k8s/overlays/dev/kustomization.yaml
 patches:
   - patch: |-
       apiVersion: apps/v1
@@ -54,7 +54,7 @@ patches:
 Apply it:
 
 ```bash
-kubectl apply -k k8s/overlays/dev
+kubectl apply -k platform/k8s/overlays/dev
 ```
 
 Kubernetes creates an extra backend pod and keeps it running.
@@ -82,7 +82,7 @@ Cloud (OCI)
 ```text
 Change Terraform (infra)        Change Kubernetes (app)
 ------------------------        ------------------------
-terraform/oci-prod              k8s/base + k8s/overlays
+platform/terraform/oci-prod     platform/k8s/base + platform/k8s/overlays
         |                                 |
 terraform apply                    kubectl apply -k
         |                                 |

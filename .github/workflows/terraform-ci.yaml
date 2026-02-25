@@ -22,8 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         dir:
-          - terraform
-          - terraform/oci-prod
+          - platform/terraform
+          - platform/terraform/oci-prod
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

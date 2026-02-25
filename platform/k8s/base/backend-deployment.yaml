@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: myapp
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5    # Keep 5 old ReplicaSets for rollback
+  selector:
+    matchLabels:
+      app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1            # Create 1 extra pod during update
+      maxUnavailable: 0      # Never have fewer than desired replicas
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      # Pod Security Context
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Anti-affinity: spread pods across nodes for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [backend]
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: backend
+          image: backend:latest   # Overridden by Kustomize per environment
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # Sensitive env from Secret
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_HOST
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: LLM_API_KEY
+            - name: API_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: API_AUTH_KEY
+
+          # Container Security Context
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+          # Resource management — CRITICAL for K8s scheduling
+          resources:
+            requests:              # Guaranteed resources (used for scheduling)
+              cpu: 100m
+              memory: 128Mi
+            limits:                # Maximum allowed (OOMKilled if exceeded)
+              cpu: 500m
+              memory: 512Mi
+
+          # Startup probe — give the app time to connect to DB and run migrations
+          # K8s won't send liveness/readiness until startup succeeds
+          startupProbe:
+            httpGet:
+              path: /startup
+              port: http
+            failureThreshold: 60   # 60 × 2s = 2 min (Postgres + migrations can be slow on cold start)
+            periodSeconds: 2
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+
+          # Liveness probe — restart if the app hangs
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # Readiness probe — remove from Service if not ready
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          # Graceful shutdown: sleep lets K8s remove pod from Service endpoints
+          # before the app starts shutting down
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+
+          # Temp directory for non-root writable filesystem
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}

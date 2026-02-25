@@ -5,15 +5,16 @@ Production-ready, cloud-native application. Deployed on Kubernetes with CI/CD an
 ## Highlights
 
 - React 18 + Vite frontend
-- Node.js + Express backend
+- Node.js + Express backend and microservices
 - PostgreSQL StatefulSet
+- Redis and Kafka
 - Kubernetes with Kustomize overlays
 - GitHub Actions CI/CD
 - OCI Terraform for production cluster
 
 ## Architecture
 
-Ingress → Frontend (Nginx) → Backend (Express) → PostgreSQL
+Ingress → Frontend (Nginx) → Backend (Express) → PostgreSQL + Redis + Kafka + Auth + Notifications
 
 ![Infrastructure Architecture](docs/infra-architecture.svg)
 
@@ -36,22 +37,28 @@ Access:
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8080
 - Health: http://localhost:8080/health
+- Auth: http://localhost:8081/health
+- Notifications: http://localhost:8082/health
+- Redis: localhost:6379
+- Kafka: localhost:9092
 
 ### Kubernetes (Local with kind)
 
 ```bash
 kind create cluster --name myapp
-chmod +x scripts/bootstrap-cluster.sh
-./scripts/bootstrap-cluster.sh
+chmod +x platform/scripts/bootstrap-cluster.sh
+./platform/scripts/bootstrap-cluster.sh
 docker compose build
 kind load docker-image myapp-frontend:latest --name myapp
 kind load docker-image myapp-backend:latest --name myapp
-kubectl apply -k k8s/overlays/dev
+kubectl apply -k platform/k8s/overlays/dev
 ```
 
 ```bash
 kubectl port-forward svc/frontend 3000:80 -n myapp-dev
 kubectl port-forward svc/backend 8080:80 -n myapp-dev
+kubectl port-forward svc/auth-service 8081:80 -n myapp-dev
+kubectl port-forward svc/notifications-service 8082:80 -n myapp-dev
 ```
 
 ## Environments
@@ -64,13 +71,13 @@ Destroying the cluster removes all namespaces.
 
 ## Terraform (OCI)
 
-Terraform manages the production cluster in `terraform/oci-prod`.
+Terraform manages the production cluster in `platform/terraform/oci-prod`.
 
 ### Prerequisites
 
 - OCI CLI configured (`~/.oci/config` and `~/.oci/oci_api_key.pem`)
-- Backend config from `terraform/oci-prod/backend.hcl.example`
-- Variables from `terraform/oci-prod/terraform.tfvars.example`
+- Backend config from `platform/terraform/oci-prod/backend.hcl.example`
+- Variables from `platform/terraform/oci-prod/terraform.tfvars.example`
 
 ### Create or Update
 
@@ -90,7 +97,7 @@ make tf-plan-prod
 CONFIRM_DESTROY=prod make tf-destroy-prod
 ```
 
-To have a separate dev cluster, create a new Terraform folder (e.g. `terraform/oci-dev`) with its own backend state.
+To have a separate dev cluster, create a new Terraform folder (e.g. `platform/terraform/oci-dev`) with its own backend state.
 
 ## Cost Optimization (Sleep/Wake)
 
@@ -134,21 +141,23 @@ kubectl rollout status deployment/backend -n myapp-production
 ## Repository Layout
 
 ```
-frontend/   React app
-backend/    Node.js API
-k8s/        Kubernetes manifests (base + overlays)
-terraform/  OCI infrastructure
+services/   Application services
+  frontend/            React app
+  backend/             Node.js API
+  auth-service/        Auth microservice
+  notifications-service/ Notifications microservice
+platform/   Infrastructure and operations
+  k8s/      Kubernetes manifests (base + overlays)
+  terraform/ OCI infrastructure
 .github/    CI/CD workflows
-scripts/    Cluster bootstrap utilities
+docs/       Architecture diagrams and flow docs
 ```
 
 ## Operations Playbook
 
 See [OPERATIONS_PLAYBOOK.md](OPERATIONS_PLAYBOOK.md) for day-to-day commands.
-- **ServiceAccount** — pod identity
 - **SecurityContext** — non-root, read-only FS, drop capabilities
 - **Pod Security Standards** — restricted mode
-- **NetworkPolicy** — default-deny + allowlist
 
 ### Storage
 - **PersistentVolumeClaim** — database storage
@@ -164,7 +173,7 @@ See [OPERATIONS_PLAYBOOK.md](OPERATIONS_PLAYBOOK.md) for day-to-day commands.
 
 ```bash
 # 1. Set up their namespace
-./scripts/create-dev-namespace.sh alice alice@company.com
+./platform/scripts/create-dev-namespace.sh alice alice@company.com
 
 # 2. They configure their kubeconfig
 aws eks update-kubeconfig --name myapp --region us-east-1

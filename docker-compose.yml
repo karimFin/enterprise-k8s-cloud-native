@@ -14,18 +14,20 @@ services:
   # ---------------------------------------------------------------------------
   frontend:
     build:
-      context: ./frontend
+      context: ./services/frontend
       target: builder
       dockerfile: Dockerfile
     command: npx vite --host 0.0.0.0 --port 3000
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
+      - ./services/frontend/src:/app/src
+      - ./services/frontend/index.html:/app/index.html
     environment:
       - VITE_API_URL=http://localhost:8080
       - VITE_API_KEY=${API_AUTH_KEY}
+      - VITE_AUTH_URL=http://localhost:8081
+      - VITE_NOTIFICATIONS_URL=http://localhost:8082
     depends_on:
       backend:
         condition: service_healthy
@@ -35,13 +37,13 @@ services:
   # ---------------------------------------------------------------------------
   backend:
     build:
-      context: ./backend
+      context: ./services/backend
       target: runtime
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     volumes:
-      - ./backend/src:/app/src
+      - ./services/backend/src:/app/src
     command: node src/server.js
     environment:
       - NODE_ENV=development
@@ -74,6 +76,68 @@ services:
       db:
         condition: service_healthy
       qdrant:
+        condition: service_started
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      target: runtime
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./services/auth-service/src:/app/src
+    command: node src/server.js
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  notifications-service:
+    build:
+      context: ./services/notifications-service
+      target: runtime
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./services/notifications-service/src:/app/src
+    command: node src/server.js
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost:3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
         condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
@@ -114,6 +178,30 @@ services:
       retries: 10
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  kafka:
+    image: lucidworks/kafka:3.7.0-debian-12-r0
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_KRAFT_CLUSTER_ID=kraft-cluster
+      - ALLOW_PLAINTEXT_LISTENER=yes
+
   # ---------------------------------------------------------------------------
   # pgAdmin — optional DB UI, start with: docker compose --profile tools up
   # ---------------------------------------------------------------------------
@@ -133,4 +221,8 @@ volumes:
   pgdata:
     driver: local
   qdrant_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
     driver: local
