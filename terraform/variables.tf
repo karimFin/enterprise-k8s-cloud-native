@@ -33,6 +33,11 @@ variable "enable_monitoring" {
   default = false
 }
 
+variable "enable_loki" {
+  type    = bool
+  default = false
+}
+
 variable "cert_manager_email" {
   type    = string
   default = "admin@myapp.example.com"
