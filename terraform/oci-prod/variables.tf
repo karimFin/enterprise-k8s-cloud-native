@@ -121,7 +121,7 @@ variable "monitoring_chart_version" {
 
 variable "loki_chart_version" {
   type    = string
-  default = "2.16.0"
+  default = "2.10.3"
 }
 
 variable "prometheus_retention" {
