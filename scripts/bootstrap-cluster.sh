@@ -88,6 +88,19 @@ echo "✅ Prometheus & Grafana installed"
 echo "   Access Grafana: kubectl port-forward svc/monitoring-grafana 3001:80 -n monitoring"
 echo "   Login: admin / admin"
 
+echo ""
+echo "🧾 Installing Loki..."
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm upgrade --install loki grafana/loki-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --set grafana.enabled=false \
+  --set prometheus.enabled=false
+
+echo "✅ Loki installed"
+
 # ─── 5. Create application namespaces ─────────────────────────
 echo ""
 echo "📁 Creating application namespaces..."

@@ -39,3 +39,28 @@ resource "helm_release" "monitoring" {
     })
   ]
 }
+
+resource "helm_release" "loki" {
+  count            = var.enable_loki ? 1 : 0
+  name             = "loki"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "loki-stack"
+  namespace        = try(kubernetes_namespace_v1.monitoring[0].metadata[0].name, "monitoring")
+  version          = var.loki_chart_version
+  timeout          = 900
+  create_namespace = true
+
+  values = [
+    yamlencode({
+      grafana = {
+        enabled = false
+      }
+      prometheus = {
+        enabled = false
+      }
+      promtail = {
+        enabled = true
+      }
+    })
+  ]
+}

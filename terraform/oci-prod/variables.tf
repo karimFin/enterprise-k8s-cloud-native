@@ -109,9 +109,19 @@ variable "enable_monitoring" {
   default = false
 }
 
+variable "enable_loki" {
+  type    = bool
+  default = false
+}
+
 variable "monitoring_chart_version" {
   type    = string
   default = "55.5.0"
+}
+
+variable "loki_chart_version" {
+  type    = string
+  default = "2.16.0"
 }
 
 variable "prometheus_retention" {
